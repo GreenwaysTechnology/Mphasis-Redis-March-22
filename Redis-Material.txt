@@ -1,0 +1,159 @@
+				Redis
+..............................................................................................
+
+What is Redis?
+   Redis is an open source (BSD licensed), in-memory "data structure(List,Stack,LinkedList,Set,HashTable,Map") store
+
+What is Data Structure?
+  Organization of data based on structure.
+
+Objective :
+    - Store - write - IO
+    - Process - IO , CPU
+    - Report -read -IO
+
+Store:
+     1.Peristent : Permanent
+       -Disk store
+          -Files
+             -Structured
+                    -Database Management System/Relational Database System
+			 -SQL-----------------------Reading,Processing,Write
+             -Unstructured
+                    -NOSQL Movement
+		    -Big Data
+     2.In Memory : not permant
+
+In Memory Data Structure
+  
+   Storing data inside RAM
+   Read data from RAM
+   Processing data from RAM.
+   Storing data in cpu register.
+...........................................................................................
+					NoSQL
+..........................................................................................
+
+Common Characteristics NOSQL
+
+1.schemaless
+  A schemaless database allows you to store any data
+
+A schemaless database allows any data, structured with individual fields and structures, to be stored in the database.
+Being schemaless reduces ceremony (you don't have to define schemas) and increases flexibility (you can store all sorts of data without prior definition)
+
+The concept of "schema" also applies in-memory
+
+Every programming language captures data in the form of "schema (plan)"
+
+java:
+
+class Customer {
+  int id;
+  String name;
+  double invoiceValue;
+}
+
+Customer cust=new Customer();
+cust.id =1; //storing data in memory
+
+A class definition defines the logical fields you can use to manipulate it. This is effectively a schema.
+
+One object can combine a schema and schemaless access.
+
+class Customer {
+  int id;
+  String name;
+  double invoiceValue;
+}
+
+Customer cust=new Customer();
+cust.city = ""
+
+2.Not using Relational model therory
+
+3.Running on well on clusters 
+    To enable fail over,High Avaiability
+
+4.Open sources
+.........................................................
+Drawbacks of Relational DBs
+- Impedance mismatch (In-memory(object) model of an application is different from (relational) model on disk). 
+
+- That's why there are ORM frameworks which lead to loss of performance
+- They are not designed to run efficiently on clusters
+
+Why they are picking up now
+
+- There is a movement away from using databases as integration points towards encapsulating databases within applications and integrating through (web) services.
+
+- The vital factor for a change in data storage was the need to support large volumes of data by running on clusters.
+- Relational DBs can be very costly to support large volume of data.
+............................................................................................
+				NoSQL data base Types
+.............................................................................................
+
+1.Key-value Store
+2.Document based Store
+3.Column Based Store
+4.Graph based Store
+
+
+1.Key-Value Store:
+ 
+In this model, data is stored,processed based on the concept called "Key-value"
+- Key-Value
+ : based on data structure called "dictionary/map/hashmap/hashtable"
+
+ KEY ------------>Value
+
+ id 1000 -------> Subramanian
+
+ id 2000--------->Murgan
+
+Implementations:
+
+1.Redis
+2.Riak
+3.Memcached
+4.Hazelcast
+5.Apache Ignite
+
+
+2.Document based Store
+
+A document database (also known as a document-oriented database or a document store) is a database that stores information in documents.
+
+https://www.mongodb.com/document-databases
+
+Document:
+  Collection of information;
+eg:
+  SGML
+  XML
+  HTML
+  JSON -
+
+Implementations
+
+1.Mongodb
+2.CouchDB
+
+3.Coloumn based store
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
