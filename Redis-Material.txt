@@ -76,7 +76,7 @@ cust.city = ""
     To enable fail over,High Avaiability
 
 4.Open sources
-.........................................................
+...........................................................................................
 Drawbacks of Relational DBs
 - Impedance mismatch (In-memory(object) model of an application is different from (relational) model on disk). 
 
@@ -141,12 +141,109 @@ Implementations
 
 3.Coloumn based store
 
+   Colum oriented data base stores data based on columns
+
+Hbase,Cassandra,Hypertable
+
+4.Graph Databases
+  Stores data based on datastructure called "tree/graph" model
+
+Neo4j,Inifinte graph, OrientDB, FlockDB etc....
+..............................................................................................
+				  Redis - Remote Dictionary Server
+..............................................................................................
+
+It is key-value no sql data store.
+
+Redis is polyglot data store.
+  Redis can be used as database
+  Redis can be used as cache solution.
+  Redis can be used as "Message Broker"
+..............................................................................................
+
+How to install redis? Redis distribution
+
+Mode of Distribution:
+
+1.Open source - Redis.io
+2.Commerical  - Redis cloud - redislabs
 
 
+Redis Platform:
+..............
+Redis is officially available on unix,linux,bsd versions only.
+redis is not available on windows.
+
+Redis is available on windows 
+-via docker.
+-via third party - it is not stable.
+
+Redis on Windows using Docker:
+..............................
+
+Lab 1 : how to start redis using docker
 
 
+What is redis instance?
+
+ Redis is a simple c program. Redis is written in c language.
+
+What are the tools available in redis?
+
+=>Redis server
+    Process like traditional database and webservers.
+  -default port 6379
+  -default host localhost
+  -standalone mode - by default
+
+=>Redis client
+   Software which connects redis server
+ Most of the programming language who offers api to connect redis server.
+
+Java
+ Jedis
+ lettuce 
+ Spring boot integration.
+
+redis-cli
+  Redis command line tool to connect redis
 
 
+How to start  redis server?
+
+docker run --name some-redis redis
+
+1:C 22 Mar 2022 13:26:47.062 # oO0OoO0OoO0Oo Redis is starting oO0OoO0OoO0Oo
+1:C 22 Mar 2022 13:26:47.062 # Redis version=6.2.6, bits=64, commit=00000000, modified=0, pid=1, just started
+1:C 22 Mar 2022 13:26:47.062 # Warning: no config file specified, using the default config. In order to specify a config file use redis-server /path/to/redis.conf
+1:M 22 Mar 2022 13:26:47.063 * monotonic clock: POSIX clock_gettime
+1:M 22 Mar 2022 13:26:47.064 * Running mode=standalone, port=6379.
+1:M 22 Mar 2022 13:26:47.064 # Server initialized
+1:M 22 Mar 2022 13:26:47.064 * Ready to accept connections
+  
+
+Virtual Machine
+Image - passive copy of os
+container - Running copy of image
+
+In docker world, every software is delivered as images.
+
+
+How to connect redis using redis-cli?
+
+
+docker exec -it my-redis redis-cli
+
+Here we connect redis server with interactive mode
+
+-it -interactive mode
+my-redis => Name of the container
+redis-cli => image/container
+
+docker exec -it my-redis redis-cli
+127.0.0.1:6379> ping
+PONG
+127.0.0.1:6379>
 
 
 
