@@ -244,6 +244,113 @@ docker exec -it my-redis redis-cli
 127.0.0.1:6379> ping
 PONG
 127.0.0.1:6379>
+.............................................................................................
+Redis Architecture : Redis Components:
+......................................
+
+Relational databases such oracle/mysql/db2 stores data in the disk file.
+
+Redis is storing data in the main memory - RAM. 
+  Redis inmemory data store.
+
+Since redis is in memory database, there is possiblity of data loss,Redis offers a concept of snapshot.
+
+All in memory data is replicated into disk in a file: database file.
+..............................................................................................
+				Redis Server and Client Communication
+..............................................................................................
+
+Redis server and clients are communicated via redis protocal, redis protocal in tern uses TCP protocal.
+
+Application Protocal:
+
+Client-----RESP(REdis Serialization Protocal)------------------------Redis Server
+            
+Network Protocal:
+
+Client-----------TCP------------------------Redis Server
+
+
+..............................................................................................
+				 Redis uses -> Request-Response Model
+..............................................................................................
+
+Redis clients sends sequence of "commands" with args or without args to Redis server.
+
+Redis Server receives the commands, process the commands and a reply is sent back to client.
+
+Redis offers lot of commands.
+
+1.ping
+  used to test server
+
+2.echo
+  used to echo the output
+
+3.quit
+   used to close the session with server
+
+What is command?
+
+ Command is in nutshell , it is c api(procedure/function)
+..............................................................................................
+				 How to store data inside redis
+.............................................................................................
+
+In RDBMS , data is stored in tables.
+table is collection of row and columns
+
+row indicates data
+column indicates identifier
+id name 
+1  subramanian
+
+id = 1
+name =subramanian
+
+In Redis data is stored in RAM
+In redis data is stored in the form of data structure-Dictionary/Hashtable/Map -Key - value
+
+Redis stores data in the key value pair- Redis data models
+
+What is Key? What can be key?
+ 
+ Key is unique indentifier which indifies the data.
+ 
+What can be value?
+  Value can be
+ »»Strings
+ »»Lists
+ »»Sets
+ »»Sorted sets
+ »»Hashes
+ »»Bit arrays
+ »»Streams
+ »»HyperLogLogs
+  
+How to store simple data?
+
+Commands:
+  SET KEY VALUE
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
