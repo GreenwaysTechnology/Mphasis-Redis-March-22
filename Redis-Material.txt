@@ -333,6 +333,302 @@ How to store simple data?
 Commands:
   SET KEY VALUE
   
+127.0.0.1:6379> SET message "hello"
+OK
+
+How to read /get value ?
+
+GET key
+
+127.0.0.1:6379> SET message "hello"
+OK
+127.0.0.1:6379> GET message
+"hello"
+127.0.0.1:6379> SET id 1
+OK
+127.0.0.1:6379> GET id
+"1"
+127.0.0.1:6379> SET name "Subramanian"
+OK
+127.0.0.1:6379> GET name
+"Subramanian"
+127.0.0.1:6379>
+//////////////////////////////////////////////////////////////////////////////////////////////
+				Redis schema
+..............................................................................................
+
+Redis offers the database(schema), where all data is stored.
+
+Redis has 16 logical databases, the default database starts with 0.
+Redis database name starts with numbers 0 to 15.
+
+127.0.0.1:6379> SELECT 1
+OK
+127.0.0.1:6379[1]> GET name
+(nil)
+127.0.0.1:6379[1]> SELECT 0
+OK
+127.0.0.1:6379> GET name
+"Ram"
+.............................................................................................
+				  Keys
+............................................................................................
+
+1.Keys are the primary way to access data values within Redis.
+
+2.The majority of Redis commands operate a key or keys,so it makes an excellent place to start.
+
+3.Key names are unique by definition.
+
+4.Key names are binary safe in Redis.
+
+5.This means any binary sequence can be used as a key, anything from a simple string like Foo,
+numbers like 42, or 3.1415, or a binary value.
+
+127.0.0.1:6379> SET name Subramanian
+OK
+127.0.0.1:6379> SET 1 100
+OK
+127.0.0.1:6379> GET 1
+"100"
+127.0.0.1:6379> GET name
+"Subramanian"
+127.0.0.1:6379> SET true isValid
+OK
+127.0.0.1:6379> GET true
+"isValid"
+127.0.0.1:6379>
+
+6.They can be up to 512 megabytes in size,and that may be increased in future versions of Redis.
+
+7.However, super long keys are generally not recommended.
+
+8.There is a trade-off between having reasonable key names versus the amounts of memory
+used to store them.
+
+9.Within a logical database, a single flat key space exists.
+
+10.This means all the key names occupy the same space.
+
+11.There is no automatic separation of key names into named groups such as buckets or collections.
+
+12.Within a logical database, the key names are unique as mentioned.
+But the same key name can appear in multiple logical databases,
+so logical databases do provide separation of key names.
+
+13.Typically, for Redis users, some type of structured key name
+is used, often with a colon as a separator.
+ 
+   user:1000:followers
+
+   user - object
+   1000 - unique identifier
+   followers -composed object
+
+ store information for user 1000 follower information.
+
+  user:1000:followers 
+
+   user - object
+   1000 - unique identifier
+   followers -composed object
+
+ store information for user 100 follower information.
+
+In this example, you can see how a key name is constructed.
+
+We have used a mixture of tags like user and followers,
+as well as actual values like the user ID of 1000.
+
+The exact choice of how to structure these key names is down to the development team to choose.
+
+This is an example of a typical convention used in the Redis community.
+
+Since a key name is a binary sequence, by implication,
+it's case sensitive.
+
+ registerusers:1000:followers
+ Registerusers:1000:followers
+ RegisterUsers:1000:followers
+ registerUsers:1000:followers
+
+In this example, all three key names represent different keys.
+The server is simply doing a binary comparison on the key name to determine if the key exists before it's retrieved or modified.
+..............................................................................................
+
+				SET KEY
+................................................................................................
+
+SET key value [EX seconds|PX milliseconds|KEEPTTL] [NX|XX] [GET]
+
+Set key to hold the string value. If key already holds a value, it is overwritten, regardless of its type. Any previous time to live associated with the key is discarded on successful SET operation.
+
+
+The SET command supports a set of options that modify its behavior:
+
+EX seconds -- Set the specified expire time, in seconds.
+PX milliseconds -- Set the specified expire time, in milliseconds.
+NX -- Only set the key if it does not already exist.
+XX -- Only set the key if it already exist.
+KEEPTTL -- Retain the time to live associated with the key.
+GET -- Return the old value stored at key, or nil when key did not exist.
+
+
+
+Set provides a way to store a value for a given key name.
+We will discuss the additional parameters
+to set later in this unit.
+
+GET returns the value at the given key name.
+
+
+GET KEY :
+ Get value in the given key name.
+
+SET customer:1000 fred
+
+GET customer:1000
+
+SET customer:1000 fred
+
+Get keys names from existing database
+
+Let's define a key for a first customer, Fred,
+with the ID of 1000.
+
+Note how Redis replies with an OK response.
+We can get an individual key with the GET command.
+
+Note that the CLI marks the response as string using
+the double quotes convention.
+
+We can now add our second key for customer Jane.
+
+There are two commands for getting
+a list of existing key names in your Redis database.
+..............................................................................................
+KEYS With Options: Timeout /  TTL - Time to Live
+................................................
+
+127.0.0.1:6379> SET message "hello" PX 100
+OK
+127.0.0.1:6379> get message
+(nil)
+127.0.0.1:6379> SET message "hello" PX 1000
+OK
+127.0.0.1:6379> get message
+(nil)
+127.0.0.1:6379> SET greet "hello" PX 5000
+OK
+127.0.0.1:6379> get message
+(nil)
+127.0.0.1:6379> get greet
+(nil)
+127.0.0.1:6379> SET greet "hello" PX 5000
+OK
+127.0.0.1:6379> get greet
+"hello"
+127.0.0.1:6379> get greet
+..............................................................................................
+				Key Managment commands
+..............................................................................................
+
+How to delete key?
+
+->Manual Delete
+->Auto delete
+
+Manual Deletion:
+................
+
+DEL key [key ...]
+
+Removes the specified keys. A key is ignored if it does not exist.
+
+Return value
+Integer reply: The number of keys that were removed.
+
+-The DEL Command will remove the key and memory associated with the key.
+-This is performed as a blocking opertion.
+
+eg:
+
+UnLink:
+......
+-With UNLINK, key is unlinked , hence the name of the  command and will no longer exists.
+-The memory associated with the key value is reclaimed by an asynchronous process,so the UNLINK is a  non-blocking command.
+
+eg:
+ unlink customer:100
+
+-We can use UNLINK to remove customer 1000.
+-The return from the command is the number of keys removed in this case, 1.
+-When you get a key that does not exist,nil is returned, as you can see here.
+
+unlink customer:100
+>nil
+ You may have already spotted this already,but the key does not have to exist
+before you can manipulate it.
+
+
+There is no equivalent of create table
+like you would see in relational databases.
+When we execute the set command, on the key that does not exist,
+
+it causes the key to be created, and the value to be set.
+
+eg:
+127.0.0.1:6379> Keys *
+1) "user:2:name"
+2) "user:1:name"
+3) "name"
+4) "user:3:name"
+5) "id"
+6) "true"
+7) "1"
+127.0.0.1:6379> del  1
+(integer) 1
+127.0.0.1:6379> Keys *
+1) "user:2:name"
+2) "user:1:name"
+3) "name"
+4) "user:3:name"
+5) "id"
+6) "true"
+127.0.0.1:6379> unlink id
+(integer) 1
+127.0.0.1:6379> Keys *
+1) "user:2:name"
+2) "user:1:name"
+3) "name"
+4) "user:3:name"
+5) "true"
+127.0.0.1:6379>
+.............................................................................................
+				del vs unlink
+del is blocking command
+unlink is nonblocking command
+
+.............................................................................................
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
