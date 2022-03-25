@@ -611,6 +611,458 @@ unlink is nonblocking command
 
 .............................................................................................
 
+However, there are times when you only want to set the value if the key already exists.
+
+EXISTS key [key ...]
+
+EXISTS customer:1000
+127.0.0.1:6379> EXISTS customer:2000
+(integer) 1
+127.0.0.1:6379> EXISTS customer:9000
+(integer) 0
+127.0.0.1:6379>
+
+it returns 1 for key present , 0 means no key present
+.............................................................................................
+				Exists and SET
+
+
+Use case :
+i want to set key only , if key does not exits -i want to create new only if key does not exits.
+127.0.0.1:6379> EXISTS customer:9000
+(integer) 0
+127.0.0.1:6379> SET customer:9000 jane
+OK
+
+You could first check with the exist command to see if the key is present before using SET.
+
+But having two operations-- the exists followed by a set--means "two round trips Redis" and possible inconsistencies between the operations.
+.............................................................................................
+				How to avoid sending two commands
+.............................................................................................
+
+SET key value [EX seconds|PX milliseconds|KEEPTTL] [NX|XX] [GET]
+
+NX -  for create
+XX -  for update.
+
+127.0.0.1:6379> get user:4:name
+"John"
+127.0.0.1:6379> SET user:4:name  foo NX
+(nil)
+127.0.0.1:6379> SET user:4:name  foo XX
+OK
+127.0.0.1:6379> get user:4:name
+"foo"
+127.0.0.1:6379> SET user:5:name  foo NX
+OK
+127.0.0.1:6379> get user:4:name
+"foo"
+127.0.0.1:6379> SET user:5:name  foo NX
+(nil)
+127.0.0.1:6379>
+.............................................................................................
+ 			 Timeout - Define the life of any Key - TTL(Time to Live) - Expire
+..............................................................................................
+
+Generally keys are persitable, keys will not be deleted until we set the life time of keys.
+
+Key can be deleted manually - del and unlink
+Key can be deleted by timeout 
+
+There are two patterns
+
+1.when key is created we can define the life time of key
+
+ SET key value [EX seconds|PX milliseconds|KEEPTTL] [NX|XX] [GET]
+
+2.After key defined, later we can define the timeout 
+
+ EXPIRE key seconds [NX|XX|GT|LT]
+
+NX – Set expiry only when the key has no expiry
+XX – Set expiry only when the key has an existing expiry
+GT – Set expiry only when the new expiry is greater than current one
+LT – Set expiry only when the new expiry is less than current one
+
+127.0.0.1:6379> EXPIRE user:4:name 10
+(integer) 1
+127.0.0.1:6379> keys *
+1) "user:4:name"
+2) "user:2:name"
+3) "user:1:name"
+4) "user:3:name"
+5) "customer:9000"
+127.0.0.1:6379> keys *
+1) "user:4:name"
+2) "user:2:name"
+3) "user:1:name"
+4) "user:3:name"
+5) "customer:9000"
+127.0.0.1:6379> keys *
+1) "user:4:name"
+2) "user:2:name"
+3) "user:1:name"
+4) "user:3:name"
+5) "customer:9000"
+127.0.0.1:6379> keys *
+1) "user:4:name"
+2) "user:2:name"
+3) "user:1:name"
+4) "user:3:name"
+5) "customer:9000"
+127.0.0.1:6379> keys *
+1) "user:4:name"
+2) "user:2:name"
+3) "user:1:name"
+4) "user:3:name"
+5) "customer:9000"
+127.0.0.1:6379> keys *
+1) "user:4:name"
+2) "user:2:name"
+3) "user:1:name"
+4) "user:3:name"
+5) "customer:9000"
+127.0.0.1:6379> keys *
+1) "user:4:name"
+2) "user:2:name"
+3) "user:1:name"
+4) "user:3:name"
+5) "customer:9000"
+127.0.0.1:6379> keys *
+1) "user:4:name"
+2) "user:2:name"
+3) "user:1:name"
+4) "user:3:name"
+5) "customer:9000"
+
+In the above example, we are verifying the key exitence through keys * command, but which is not recommended.
+
+i have set key and its life time,how to know what is life of key. How long key can live still.
+
+TTL - Get Life in seconds
+
+PTTL -  GET LIFE in milli seconds
+
+Returns the remaining time to live of a key that has a timeout. This introspection capability allows a Redis client to check how many seconds a given key will continue to be part of the dataset.
+
+Integer reply: TTL in seconds, or a negative value in order to signal an error
+
+The command returns -2 if the key does not exist.
+The command returns -1 if the key exists but has no associated expire.
+..............................................................................................	
+				Values
+..............................................................................................
+
+How to store values and what are the different types of values?
+
+Redis stores values in the form of datastructure.
+
+Redis stores primitives values also.
+
+Primitive Values
+
+1.strings 
+2.numbers
+
+in order store values, we need data type.
+
+Value type can be:
+ »»Strings
+ »»Lists
+ »»Sets
+ »»Sorted sets
+ »»Hashes
+ »»Bit arrays
+ »»Streams
+ »»HyperLogLogs
+
+String:
+ -store alphabets
+ -store numbers
+ -store binary.
+no int,float datatype.
+
+String is most fundamental basic value
+It is binary safe,it can contain any type of data from numbers to images or seralized objects
+String can store upto 512MB data in length
+
+Strings are interally stores data into three forms
+
+Int: If the value string can be converted to an integer, e.g. -2^63 ~ 2^63, Redis saves the value as an integer. This is the most efficient encoding.
+
+Embeded String: If the size of the value string is less than or equal to 44 bytes, Redis saves the string in the same chunk of the Redis object itself. 
+This is more memory efficient than the Raw String encoding. Also, it's more cache-friendly.
+
+Raw String: Otherwise, Redis uses the raw encoding.
+
+How to know the encoded type of key?
+
+using Object command.
+
+OBJECT ENCODING key
+
+ Strings can be encoded as raw (normal string encoding) or int (strings representing integers in a 64 bit signed interval are encoded in this way in order to save space).
+
+27.0.0.1:6379> SET Player:name Sachin
+OK
+127.0.0.1:6379> SET player:avg 4.5
+OK
+127.0.0.1:6379> SET player:score 90
+OK
+127.0.0.1:6379> SET Player:name "Sachin"
+OK
+127.0.0.1:6379> Object encoding Player:name
+"embstr"
+127.0.0.1:6379> Object encoding player:avg
+"embstr"
+127.0.0.1:6379> Object encoding Player:score
+(nil)
+127.0.0.1:6379> Object encoding player:score
+"int"
+
+Numerical Operations on values:
+...............................
+127.0.0.1:6379> INCR player:score
+(integer) 91
+127.0.0.1:6379> INCR player:score
+(integer) 92
+127.0.0.1:6379> INCR player:score
+(integer) 93
+127.0.0.1:6379> INCR player:score
+(integer) 94
+127.0.0.1:6379> INCR player:score
+(integer) 95
+127.0.0.1:6379> DECR player:score
+(integer) 94
+127.0.0.1:6379> DECR player:score
+(integer) 93
+127.0.0.1:6379> DECR player:score
+(integer) 92
+127.0.0.1:6379> INCRBYFLOAT player:avg 0.5
+"5"
+127.0.0.1:6379> INCRBYFLOAT player:avg 0.5
+"5.5"
+127.0.0.1:6379> INCRBYFLOAT player:avg 0.5
+"6"
+127.0.0.1:6379> INCRBYFLOAT player:avg 0.5
+"6.5"
+127.0.0.1:6379> INCRBYFLOAT player:avg 0.5
+"7"
+127.0.0.1:6379> INCRBYFLOAT player:avg 0.5
+"7.5"
+127.0.0.1:6379> INCR player:score
+(integer) 93
+127.0.0.1:6379> INCRBY player:score 6
+(integer) 99
+127.0.0.1:6379> INCRBY player:score 4
+(integer) 103
+127.0.0.1:6379> INCRBY player:score 2
+(integer) 105
+127.0.0.1:6379>
+
+String Operations:
+..................
+
+String length -strlength
+substring  -substr
+
+127.0.0.1:6379> SET message  "hello how are you welcome"
+OK
+127.0.0.1:6379> STRLEN  message
+(integer) 25
+127.0.0.1:6379> GETRANGE message 0 3
+"hell"
+127.0.0.1:6379> GETRANGE message 5 3
+""
+127.0.0.1:6379> GETRANGE message 0 8
+"hello how"
+............................................................................................
+				  List
+............................................................................................
+
+List is core datastructure, where we can add,delete,update,find elements in any order
+List is used to create other applications -  stack,MessageQueues,PriorityQueue.
+
+List stores data in the sequence of strings in the insertion order. You can add element at head or tail -  interally Lists are linked list.
+
+Adding elements into list:
+
+Left : head
+ 1,2,3,4,5,6,......
+
+Right : tail
+
+Stack
+  - Last in first out
+LPUSH
+LPOP
+Queue
+  - First in first out
+RPUSH
+LPOP
+
+
+
+127.0.0.1:6379> LPUSH message hello
+(integer) 1
+127.0.0.1:6379> LPUSH message world
+(integer) 2
+127.0.0.1:6379> LINDEX message 0
+"world"
+127.0.0.1:6379> LINDEX message 1
+"hello"
+127.0.0.1:6379> LOP message
+(error) ERR unknown command `LOP`, with args beginning with: `message`,
+127.0.0.1:6379> LPOP message
+"world"
+127.0.0.1:6379> LPOP message
+"hello"
+127.0.0.1:6379> LPOP message
+(nil)
+.............................................................................................
+				  Set
+.............................................................................................
+
+Redis sets are an unordered collection of strings.
+It is possible to add remove and test for elements.
+Set avoids duplicates
+
+Use cases:
+You can track unique things like unique ip address visiting a given blog => How many users visited /view my blog.
+
+//////////////////////////////////////////////////////////////////////////////////////////
+
+Sets:
+Unordered collection without duplicate values
+
+offers mathmetical operations
+1.intersection
+2.difference 
+3.union
+
+Lab:
+127.0.0.1:6379> SADD players:online 1
+(integer) 1
+127.0.0.1:6379> SADD players:online 2
+(integer) 0
+127.0.0.1:6379> SADD players:online 4
+(integer) 1
+
+1 -new values
+0 -duplicate values
+
+Get All players:
+sscan players:online 0 MATCH *
+1) "0"
+2) 1) "1"
+   2) "2"
+   3) "4"
+   4) "5"
+   5) "10"
+   6) "40"
+
+How many players online??
+127.0.0.1:6379> SCARD players:online
+
+127.0.0.1:6379> SADD players:online 1
+(integer) 1
+127.0.0.1:6379> SADD players:online 2
+(integer) 0
+127.0.0.1:6379> SADD players:online 4
+(integer) 1
+127.0.0.1:6379> scan 0 MATCH players:online *
+(error) ERR syntax error
+127.0.0.1:6379> sscan 0 MATCH players:online *
+(error) ERR invalid cursor
+127.0.0.1:6379> sscan 0 MATCH players:online match *
+(error) ERR invalid cursor
+127.0.0.1:6379> sscan playlers:online 0 MATCH *
+1) "0"
+2) (empty array)
+127.0.0.1:6379> sscan players:online 0 MATCH *
+1) "0"
+2) 1) "1"
+   2) "2"
+   3) "4"
+   4) "5"
+   5) "10"
+127.0.0.1:6379> SADD players:online 4
+(integer) 0
+127.0.0.1:6379> SADD players:online 4
+(integer) 0
+127.0.0.1:6379> SADD players:online 40
+(integer) 1
+127.0.0.1:6379> SADD players:online 40
+(integer) 0
+127.0.0.1:6379> scan 0 MATCH players:online *
+(error) ERR syntax error
+127.0.0.1:6379> sscan players:online 0 MATCH *
+1) "0"
+2) 1) "1"
+   2) "2"
+   3) "4"
+   4) "5"
+   5) "10"
+   6) "40"
+127.0.0.1:6379> SCARD players:online
+(integer) 6
+127.0.0.1:6379> sismember players:online 1
+(integer) 1
+127.0.0.1:6379> sismember players:online 100
+(integer) 0
+127.0.0.1:6379> SCARD players:friends
+(integer) 1
+127.0.0.1:6379>  sinter players:online players:friends
+1) "10"
+
+
+Union : eleminate common elements
+
+127.0.0.1:6379> sadd key1  a b c d e
+(integer) 5
+127.0.0.1:6379> sadd key2 c
+(integer) 1
+127.0.0.1:6379> sadd key3 f g c
+(integer) 3
+127.0.0.1:6379> sunion key1 key2 key3
+1) "f"
+2) "c"
+3) "b"
+4) "a"
+5) "d"
+6) "e"
+7) "g"
+127.0.0.1:6379>
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+Sorted Set
+Hash
+BitMaps
+....
+Streams
+HyperLogLogs
+Redis Modules
+
+Java Integration with Redis
+
+Use cases:
+
+1.Caching Server
+2.Message Broker - Pub -Sub
+3.Streaming
+4.Redis as first class database like mysql
+etc...
+
+
+
+
+
+
+
+
+
 
 
 
