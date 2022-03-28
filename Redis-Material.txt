@@ -1036,7 +1036,6 @@ Union : eleminate common elements
 127.0.0.1:6379>
 
 //////////////////////////////////////////////////////////////////////////////////////////////
-
 Sorted Set
 Hash
 BitMaps
@@ -1055,22 +1054,220 @@ Use cases:
 4.Redis as first class database like mysql
 etc...
 
+...............................................................................................
+
+SortedSet:
+  It sorts elements based on some condition.
+
+Adding elements inside SortedSet:
+127.0.0.1:6379>  ZADD tech 1 redis
+(integer) 1
+127.0.0.1:6379>  ZADD tech 2 mongo
+(integer) 1
+127.0.0.1:6379>  ZADD tech 3 mysql
+(integer) 1
+127.0.0.1:6379>  ZADD tech 4 mysql
+
+How many elements are there in the SortedSet?
+127.0.0.1:6379> ZCARD tech
+(integer) 3
+..............................................................................................
+Hashes:
+Hashes are used to store collections of key/value pairs. Contrast a
+hash with a simple string data type where there is one value corresponding
+to one key. A hash has one key, but then within that structure are more fields and values.
+
+if you want to store data like json / table structure.
+
+HSET key field value [field value ...]
+
+127.0.0.1:6379> HSET user:1  firstName "subramanian" lastName "Murugan" city "coimbatore" status available
+(integer) 4
+127.0.0.1:6379> HGETALL user:1
+1) "firstName"
+2) "subramanian"
+3) "lastName"
+4) "Murugan"
+5) "city"
+6) "coimbatore"
+7) "status"
+8) "available"
+127.0.0.1:6379> HGET user:1 firstName
+"subramanian"
+127.0.0.1:6379> HGET user:1 lastName
+"Murugan"
+127.0.0.1:6379> HGET user:1 city
+"coimbatore"
+127.0.0.1:6379> HGET user:1 status
+"available"
+127.0.0.1:6379> HSET user:1  firstName "Ram"
+(integer) 0
+127.0.0.1:6379> HSET user:1  country "India"
+(integer) 1
+127.0.0.1:6379> HGETALL user:1
+ 1) "firstName"
+ 2) "Ram"
+ 3) "lastName"
+ 4) "Murugan"
+ 5) "city"
+ 6) "coimbatore"
+ 7) "status"
+ 8) "available"
+ 9) "country"
+10) "India"
+127.0.0.1:6379> HMSET user:1 country "USA"
+OK
+127.0.0.1:6379> HGETALL user:1
+ 1) "firstName"
+ 2) "Ram"
+ 3) "lastName"
+ 4) "Murugan"
+ 5) "city"
+ 6) "coimbatore"
+ 7) "status"
+ 8) "available"
+ 9) "country"
+10) "USA"
+127.0.0.1:6379> HMSET user:1 state "Newyork"
+OK
+127.0.0.1:6379> HGETALL user:1
+ 1) "firstName"
+ 2) "Ram"
+ 3) "lastName"
+ 4) "Murugan"
+ 5) "city"
+ 6) "coimbatore"
+ 7) "status"
+ 8) "available"
+ 9) "country"
+10) "USA"
+11) "state"
+12) "Newyork"
+127.0.0.1:6379> HDEL user:1 state
+(integer) 1
+127.0.0.1:6379> HDEL user:1 state
+(integer) 0
+127.0.0.1:6379> HMSET user:1 rank 10
+OK
+127.0.0.1:6379> HGETALL user:1
+ 1) "firstName"
+ 2) "Ram"
+ 3) "lastName"
+ 4) "Murugan"
+ 5) "city"
+ 6) "coimbatore"
+ 7) "status"
+ 8) "available"
+ 9) "country"
+10) "USA"
+11) "rank"
+12) "10"
+127.0.0.1:6379> HINCRBY user:1 rank 5
+(integer) 15
+127.0.0.1:6379> HINCRBY user:1 rank 5
+(integer) 20
+127.0.0.1:6379> HGETALL user:1
+ 1) "firstName"
+ 2) "Ram"
+ 3) "lastName"
+ 4) "Murugan"
+ 5) "city"
+ 6) "coimbatore"
+ 7) "status"
+ 8) "available"
+ 9) "country"
+10) "USA"
+11) "rank"
+12) "20"
+127.0.0.1:6379> HHKEYS user:1
+(error) ERR unknown command `HHKEYS`, with args beginning with: `user:1`,
+127.0.0.1:6379> HKEYS user:1
+1) "firstName"
+2) "lastName"
+3) "city"
+4) "status"
+5) "country"
+6) "rank"
+127.0.0.1:6379>
+..............................................................................................
+					Bit Maps
+.............................................................................................
+
+login 
+  foo
+  foo@123
+
+28-03-22 - login ...logout... login...logout..
+29-03-2 --
+bitmaps:
+BitMaps are  a data type used within Redis and represents a long list of bits that contain 0 by default and we can use SETBIT Command to flip to 1 or 0
 
 
+Key                    Value                               type
+	
+a_bitmap     0 0 0  0 0 0 0 0 0 0 0 0 0 0                  binary string
+
+bitmap can store up to 2pow 32 bits,about 4 billion items
+
+Use case: login use case
+
+SETBIT logins:2017:04 6 1
+
+here login:2017:04 is key
+6 is offset , typically userid as offset
+1 is active bit
+
+SETBIT logins:2017:04 6 1s
 
 
+27.0.0.1:6379> SETBIT mon  1 1
+(integer) 0
+127.0.0.1:6379> SETBIT mon  2 0
+(integer) 0
+127.0.0.1:6379> GETBIT mon 1
+(integer) 1
+127.0.0.1:6379> GETBIT mon 2
+(integer) 0
+...........................................................................................
+				  Redis Java Applications
+............................................................................................
+
+Redis java Clients:
+
+1.Redisson 
+2.Jedis
+3.Lettuce
 
 
+Redisson :
+=>Redisson is a Redis Java client with features of In-Memory Data Grid. It provides more convenient and easiest way to work with Redis. Redisson objects provides a separation of concern, which allows you to keep focus on the data modeling and application logic.
 
+Project Setup:
+.............
 
+1.create maven project.
 
+2.Add maven dependencies
+   <dependencies>
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson</artifactId>
+            <version>3.17.0</version>
+        </dependency>
+    </dependencies>
+3.Connect Redis Server.
+ 
+Redis server is available in different modes
 
+1.standalone mode
+2.cluster mode
+3.sentinal mode
 
+1.standalone mode
 
+4.start coding
 
-
-
-
+4.1.write a code to connect redis server
 
 
 
