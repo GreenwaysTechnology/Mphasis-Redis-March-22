@@ -1264,31 +1264,239 @@ Redis server is available in different modes
 3.sentinal mode
 
 1.standalone mode
+docker run --name myredisserver --rm -it -p 6379:6379 redis
+
+docker exec -it myredisserver redis-cli
+127.0.0.1:6379> keys *
+(empty array)
+127.0.0.1:6379> set message "Hello"
+OK
 
 4.start coding
 
-4.1.write a code to connect redis server
+package com.mycom.redis;
+
+import org.redisson.Redisson;
+import org.redisson.api.RKeys;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
+import redis.clients.jedis.JedisPooled;
+
+public class RedisApp {
+    public static void main(String[] args) {
+        //connects to default ip address and port
+        Config config = new Config();
+        config.useSingleServer()
+                .setAddress("redis://127.0.0.1:6379");
+        RedissonClient client = Redisson.create(config);
+        RedissonClient redissonClient = Redisson.create(config);
+        RKeys keys = redissonClient.getKeys();
+        keys.getKeys().forEach(data -> System.out.println("keys" + data));
+
+    }
+}
+............................................................................................
+
+How to send key-value to redis server?
+
+package com.mycom.redis.demos;
+
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
+
+public class RedisconnectionUtil {
+    static RedissonClient redissonClient;
+
+    public static RedissonClient getClient() {
+        Config config = new Config();
+        config.useSingleServer()
+                .setAddress("redis://127.0.0.1:6379");
+        RedissonClient client = Redisson.create(config);
+        redissonClient = Redisson.create(config);
+        return redissonClient;
+    }
+}
 
 
+package com.mycom.redis.demos;
+
+import org.redisson.api.RBucket;
+import org.redisson.api.RedissonClient;
+
+public class SetSimpleValue {
+    public static void main(String[] args) {
+        RedissonClient redissonClient = RedisconnectionUtil.getClient();
+        //send key and value .
+        //create key
+        RBucket<Object> bucket = redissonClient.getBucket("user:name");
+        //set value
+        bucket.set("subramanian");
+        System.out.println( "key : => " + bucket.get());
+      //  redissonClient.shutdown();
+    }
+}
+27.0.0.1:6379> get user:1:name
+"\x04>\x0bSubramanian"
+127.0.0.1:6379>
+you can see this output which is not serialized properly.
+
+Data serialization:
+
+	Data serialization is extensively used by Redisson to marshall and unmarshall bytes received or sent over network link with Redis server.
+Many popular codecs are available for usage:
+
+if you want to store data in plain string format?
+org.redisson.client.codec.StringCodec	String codec
 
 
+eg:
+package com.mycom.redis.demos;
+
+import org.redisson.api.RBucket;
+import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
+
+public class SetSimpleValue {
+    public static void main(String[] args) {
+        RedissonClient redissonClient = RedisconnectionUtil.getClient();
+        //send key and value .
+        //create key
+        RBucket<Object> bucket = redissonClient.getBucket("user:name", StringCodec.INSTANCE);
+        //set value
+        bucket.set("subramanian");
+        System.out.println( "key : => " + bucket.get());
+      //  redissonClient.shutdown();
+    }
+}
+...........................................................................................
+				How to set TTL 
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RBucket;
+import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
+
+import java.util.concurrent.TimeUnit;
+
+public class TimetoLiveKeys {
+    public static void main(String[] args) {
+        RedissonClient redissonClient = RedisconnectionUtil.getClient();
+        RBucket<String> secretKey = redissonClient.getBucket("user:otp", StringCodec.INSTANCE);
+        secretKey.set("3df45",50, TimeUnit.SECONDS);
+
+        //extends
+        secretKey.expire(60, TimeUnit.SECONDS);
+        long remainTimeToLive = secretKey.remainTimeToLive();
+        System.out.println(remainTimeToLive);
+
+    }
+}
+...................................................................................
+
+How to store Objects?
 
 
+package com.mycom.redis.demos;
+
+public class Customer {
+    private  int id;
+    private String name;
+    private String city;
+
+    public Customer() {
+    }
+
+    @Override
+    public String toString() {
+        return "Customer{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", city='" + city + '\'' +
+                '}';
+    }
+
+    public Customer(int id, String name, String city) {
+        this.id = id;
+        this.name = name;
+        this.city = city;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+}
 
 
+package com.mycom.redis.demos;
+
+import org.redisson.api.RBucket;
+import org.redisson.api.RedissonClient;
+import org.redisson.codec.TypedJsonJacksonCodec;
+
+public class StoreObject {
+    public static void main(String[] args) {
+        RedissonClient redissonClient = RedisconnectionUtil.getClient();
+        RBucket<Customer> bucket = redissonClient.getBucket("customer:info", new TypedJsonJacksonCodec(Customer.class));
+        bucket.set(new Customer(1, "Subramanian", "Coimbatore"));
+        Customer customer=bucket.get();
+        System.out.println(customer.toString());
+
+    }
+}
+..............................................................................................
+			Send and Receives values using Reactive Extension
+			   (Non blocking,Event Driven,Async)
 
 
+package com.mycom.redis.demos;
 
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.api.RedissonReactiveClient;
+import org.redisson.config.Config;
 
+public class RedisconnectionUtil {
+    static RedissonClient redissonClient;
 
-
-
-
-
-
-
-
-
+    public static RedissonClient getClient() {
+        Config config = new Config();
+        config.useSingleServer()
+                .setAddress("redis://127.0.0.1:6379");
+        RedissonClient client = Redisson.create(config);
+        redissonClient = Redisson.create(config);
+        return redissonClient;
+    }
+    public static RedissonReactiveClient getReactiveClient(){
+        Config config = new Config();
+        config.useSingleServer()
+                .setAddress("redis://127.0.0.1:6379");
+        RedissonClient client = Redisson.create(config);
+        redissonClient = Redisson.create(config);
+        return redissonClient.reactive();
+    }
+}
 
 
 
