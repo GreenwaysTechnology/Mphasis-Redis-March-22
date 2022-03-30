@@ -23,6 +23,7 @@ public class Customer {
         this.city = city;
     }
 
+
     public int getId() {
         return id;
     }

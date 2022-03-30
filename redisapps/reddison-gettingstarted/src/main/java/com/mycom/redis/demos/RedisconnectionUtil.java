@@ -22,6 +22,7 @@ public class RedisconnectionUtil {
                 .setAddress("redis://127.0.0.1:6379");
         RedissonClient client = Redisson.create(config);
         redissonClient = Redisson.create(config);
+        //project reactor instance
         return redissonClient.reactive();
     }
 }
