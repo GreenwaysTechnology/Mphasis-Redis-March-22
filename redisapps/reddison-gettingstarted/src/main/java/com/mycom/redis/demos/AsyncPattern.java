@@ -20,6 +20,9 @@ public class AsyncPattern {
     }
 
     private static void getAsync() {
+        //before running : go to redis and add key
+        //set user:2:counter 9000
+        //after setting test
         RAtomicLong longObject = RedisconnectionUtil.getClient().getAtomicLong("user:2:counter");
 // sync way
         System.out.println("Start");

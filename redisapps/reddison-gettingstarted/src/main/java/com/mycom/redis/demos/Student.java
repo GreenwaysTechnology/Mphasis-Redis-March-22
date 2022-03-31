@@ -2,6 +2,10 @@ package com.mycom.redis.demos;
 
 import java.util.List;
 
+//record  Student1(String name,String age,String city) {
+//
+//}
+
 public class Student {
 
     private String name;

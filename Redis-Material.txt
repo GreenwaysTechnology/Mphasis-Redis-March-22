@@ -1497,6 +1497,493 @@ public class RedisconnectionUtil {
         return redissonClient.reactive();
     }
 }
+............................................................................................
+
+Reddison:
+
+Reddision communicates with Redis server in three mode
+
+1.sync mode
+2.async mode
+3.Reactive mode
+
+1.sync mode 
+  In this mode commands are sent from app to redis, until response comes , the app is freezed.
+
+RedissonClient client = Redisson.create(config);
+
+RAtomicLong longObject = client.getAtomicLong('myLong');
+// sync way
+longObject.compareAndSet(3, 401);
+set key counter 1000
+
+Redis communication:
+   
+  Redis client-------commands----------------|
+         OK  - Response
+
+2.Async Mode
+    In this mode commands are sent from the client to redis, app need not wait until response returned.
+   
+RFuture<Boolean> result = longObject.compareAndSetAsync(3, 401);
+
+future.whenComplete((res, exception) -> {
+
+    // handle both result and exception
+
+});
+// or
+future.thenAccept(res -> {
+
+    // handle result
+
+}).exceptionally(exception -> {
+
+    // handle exception
+
+});
+
+Reddision will not have value immediately , rather it will have future Object. you can register listern and you can wait for the result.
+
+
+Reactive Way:
+
+ Reactive Program is program which models "streams"
+
+ data streams with async model.
+
+ Reactive program offers a features to process data streams in realtime
+
+
+Redisson exposes Reactive Streams API for most objects and based on two implementations:
+
+1.Reactor
+
+2.Rxjava
+
+RedissonReactiveClient client = redissonClient.reactive();
+
+RAtomicLongReactive atomicLong = client.getAtomicLong("myLong");
+Mono<Boolean> cs = longObject.compareAndSet(10, 91);
+Mono<Long> get = longObject.get();
+
+get.doOnNext(res -> {
+   // ...
+}).subscribe();
+
+............................................................................................
+
+Project Reactor api:
+
+1.Mono - emits 0..1  item
+2.Flux  - emits 0..N items
+
+   
+package com.mycom.redis.demos;
+
+import org.redisson.api.RAtomicLongReactive;
+import reactor.core.publisher.Flux;
+
+import java.time.Duration;
+
+public class ReactiveClientUserVisit {
+    public static void main(String[] args) {
+        //redision
+        RAtomicLongReactive atomicLong = RedisconnectionUtil.getReactiveClient()
+                .getAtomicLong("user:visit:1");
+        //reactor api
+        Flux.range(1,50)
+                .delayElements(Duration.ofSeconds(1)) //emit numbers after every 1 second
+                .flatMap(integer -> atomicLong.incrementAndGet())
+                .subscribe(System.out::println);
+
+    }
+}
+..............................................................................................
+				Sync and async
+.............................................................................................
+Sync work flow.
+
+1.callapi1()-|
+2.callapi2()-|
+3.....
+
+
+Async work flow:
+
+1callasyncapi() -----
+2.callotherapi()
+
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RAtomicLong;
+import org.redisson.api.RFuture;
+
+public class AsyncPattern {
+    public static void getSync() {
+        RAtomicLong longObject = RedisconnectionUtil.getClient().getAtomicLong("user:2:counter");
+// sync way
+        System.out.println("Start");
+        boolean res = longObject.compareAndSet(9000, 9000);
+        System.out.println(res);
+        System.out.println("end");
+    }
+
+    public static void main(String[] args) {
+          // getSync();
+             getAsync();
+
+    }
+
+    private static void getAsync() {
+        RAtomicLong longObject = RedisconnectionUtil.getClient().getAtomicLong("user:2:counter");
+// sync way
+        System.out.println("Start");
+        RFuture<Boolean> booleanRFuture = longObject.compareAndSetAsync(9000, 9000);
+        System.out.println("end");
+
+        booleanRFuture.thenAccept(res -> {
+            System.out.println("Got Result " + res);
+        }).exceptionally(err -> {
+            System.out.println("Got Error " + err);
+            return null;
+        });
+    }
+}
+..............................................................................................
+			How to avoid sending multiple keys sequentially - Multi Bucket
+...........................................................................................
+package com.mycom.redis.demos;
+
+import org.redisson.client.codec.StringCodec;
+
+public class MultiBucket {
+    public static void main(String[] args) {
+        RedisconnectionUtil.getReactiveClient()
+                .getBuckets(StringCodec.INSTANCE)
+                .get("user:1:name", "user:2:name", "user:3:name")
+                .subscribe(System.out::println);
+    }
+}
+.............................................................................................
+				 Event driven Programming with Redis
+                                   Redis keyspace notifications
+                            Monitor changes to Redis keys and values in real time
+.............................................................................................
+
+Keyspace notifications allow clients to subscribe to Pub/Sub channels in order to receive events affecting the Redis data set in some way.
+
+Examples of events that can be received are:
+
+All the commands affecting a given key.
+All the keys receiving an LPUSH operation.
+All the keys expiring in the database 0.
+
+Note: Redis Pub/Sub is fire and forget that is, if your Pub/Sub client disconnects, and reconnects later, all the events delivered during the time the client was disconnected are lost.
+
+Syntax of event:
+
+PUBLISH __keyspace@0__:mykey del
+
+PUBLISH __keyevent@0__:del mykey
+
+Redis by default will not publish /emit events, we need to configure /activate the events publisher.
+
+Events:
+K     Keyspace events, published with __keyspace@<db>__ prefix.
+E     Keyevent events, published with __keyevent@<db>__ prefix.
+g     Generic commands (non-type specific) like DEL, EXPIRE, RENAME, ...
+$     String commands
+l     List commands
+s     Set commands
+h     Hash commands
+z     Sorted set commands
+t     Stream commands
+d     Module key type events
+x     Expired events (events generated every time a key expires)
+e     Evicted events (events generated when a key is evicted for maxmemory)
+m     Key miss events (events generated when a key that doesn't exist is accessed)
+A     Alias for "g$lshztxed", so that the "AKE" string means all the events except "m".
+
+Two ways :
+
+1.via redis.conf file
+2.via cli - through command
+   config set notify-keyspace-events AKE
+
+
+How to listen events inside app?
+package com.mycom.redis.demos;
+
+import org.redisson.api.ExpiredObjectListener;
+import org.redisson.api.RBucketReactive;
+import org.redisson.client.codec.StringCodec;
+
+import java.util.concurrent.TimeUnit;
+
+public class EventListeners {
+    public static void main(String[] args) {
+        RBucketReactive<String> bucket = RedisconnectionUtil.getReactiveClient().getBucket("user:1:name", StringCodec.INSTANCE);
+        //setting value with 10 seconds ttl
+        bucket.set("sam", 10, TimeUnit.SECONDS).subscribe();
+        //Register listener which listens for redis events
+//        bucket.addListener(new ExpiredObjectListener() {
+//            @Override
+//            public void onExpired(String s) {
+//                System.out.println("Expired : " + s);
+//            }
+//        }).subscribe();
+        bucket.addListener((ExpiredObjectListener) s -> System.out.println("Expired : " + s))
+                .subscribe();
+
+        try {
+            Thread.sleep(11000);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+    }
+}
+Key Deleted Event:
+.................
+package com.mycom.redis.demos;
+
+import org.redisson.api.DeletedObjectListener;
+import org.redisson.api.RBucketReactive;
+import org.redisson.client.codec.StringCodec;
+import reactor.core.publisher.Mono;
+
+
+public class Demo {
+
+    public static void main(String[] args) throws InterruptedException {
+        RBucketReactive<String> bucket = RedisconnectionUtil.getReactiveClient().getBucket("user:1:name", StringCodec.INSTANCE);
+        Mono<Void> set = bucket.set("sam");
+        set.subscribe();
+
+        Mono<Void> get = bucket.get()
+                .doOnNext(System.out::println)
+                .then();
+        get.subscribe();
+        Mono<Void> event = bucket.addListener(new DeletedObjectListener() {
+            @Override
+            public void onDeleted(String name) {
+                System.out.println("Deleted : " + name);
+            }
+        }).then();
+        event.block();
+
+    }
+}
+
+test :
+127.0.0.1:6379> get user:1:name
+"sam"
+127.0.0.1:6379> del user:1:name
+(integer) 1
+..............................................................................................
+				 Hash -> RedissionMap
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RMap;
+import org.redisson.api.RMapReactive;
+import org.redisson.client.codec.StringCodec;
+import org.redisson.codec.TypedJsonJacksonCodec;
+
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+
+public class HashDataStructure {
+    public static void main(String[] args) {
+//        createReactiveHash();
+//        createNormalHash();
+//        createHashFromSet();
+//        createHashFromJavaMap();
+        createHashForObjects();
+    }
+
+    private static void createHashForObjects() {
+        //how to prisit entity class
+        TypedJsonJacksonCodec codec = new TypedJsonJacksonCodec(Integer.class, Student.class);
+        RMapReactive<Integer, Student> map = RedisconnectionUtil.getReactiveClient().getMap("users", codec);
+        Student student1 = new Student("sam", 10, "atlanta", List.of(1, 2, 3));
+        Student student2 = new Student("jake", 30, "miami", List.of(10, 20, 30));
+
+        map.put(1, student1).subscribe();
+        map.put(2, student2).subscribe();
+    }
+
+    private static void createHashFromJavaMap() {
+        RMapReactive<String, String> map = RedisconnectionUtil.getReactiveClient().getMap("user:5", StringCodec.INSTANCE);
+        Map<String, String> javaMap = Map.of(
+                "name", "jake",
+                "age", "30",
+                "city", "miami"
+        );
+        map.putAll(javaMap).then().subscribe();
+    }
+
+
+
+    private static void createHashFromSet() {
+        RMap<String, String> map = RedisconnectionUtil.getClient().getMap("somekey", StringCodec.INSTANCE);
+        map.put("1","hello");
+        HashSet<String> hashSet = new HashSet<>();
+        hashSet.add("1");
+        Map<String, String> all = map.getAll(hashSet);
+        all.values().forEach(System.out::println);
+    }
+
+    private static void createNormalHash() {
+        RMap<String, String> map = RedisconnectionUtil.getClient().getMap("user:2:", StringCodec.INSTANCE);
+        map.put("name", "subramanian");
+        map.put("age", "42");
+        map.put("city", "Coimbatore");
+        map.values().forEach(System.out::println);
+
+        //update
+        map.put("age","40");
+        map.values().forEach(System.out::println);
+
+    }
+
+    private static void createReactiveHash() {
+        RMapReactive<Object, Object> map = RedisconnectionUtil.getReactiveClient().getMap("user:1", StringCodec.INSTANCE);
+        //set values
+        map.put("name", "sam").subscribe();
+        map.put("age", "10").subscribe();
+        map.put("city", "atlanta").subscribe();
+        map.get("name").subscribe(System.out::println);
+    }
+}
+.............................................................................................
+How to expire single key in map?
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RMapCacheReactive;
+import org.redisson.codec.TypedJsonJacksonCodec;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+public class HashWithKeyExpire {
+    public static void main(String[] args) {
+        TypedJsonJacksonCodec codec = new TypedJsonJacksonCodec(Integer.class, Student.class);
+        RMapCacheReactive<Integer, Student> mapCache = RedisconnectionUtil.getReactiveClient().getMapCache("users:cache", codec);
+        //TTL For Hash keys
+        Student student1 = new Student("sam", 10, "atlanta", List.of(1, 2, 3));
+        Student student2 = new Student("jake", 30, "miami", List.of(10, 20, 30));
+
+        mapCache.put(1,student1,5, TimeUnit.SECONDS).subscribe();
+        mapCache.put(2, student2, 10, TimeUnit.SECONDS).subscribe();
+
+    }
+}
+
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RMapCacheReactive;
+import org.redisson.codec.TypedJsonJacksonCodec;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+public class HashWithKeyExpire {
+    public static void main(String[] args) {
+        TypedJsonJacksonCodec codec = new TypedJsonJacksonCodec(Integer.class, Student.class);
+        RMapCacheReactive<Integer, Student> mapCache = RedisconnectionUtil.getReactiveClient().getMapCache("users:cache", codec);
+        //TTL For Hash keys
+        Student student1 = new Student("sam", 10, "atlanta", List.of(1, 2, 3));
+        Student student2 = new Student("jake", 30, "miami", List.of(10, 20, 30));
+
+        mapCache.put(1,student1,5, TimeUnit.SECONDS).subscribe();
+        mapCache.put(2, student2, 10, TimeUnit.SECONDS).subscribe();
+
+    }
+}
+............................................................................................
+				 Building Cache Infrastructure
+					using MapCache
+...........................................................................................
+					
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.LocalCachedMapOptions;
+import org.redisson.api.RLocalCachedMap;
+import org.redisson.api.RedissonClient;
+import org.redisson.codec.TypedJsonJacksonCodec;
+import reactor.core.publisher.Flux;
+
+import java.time.Duration;
+import java.util.List;
+
+public class ServiceOne {
+    public static void main(String[] args) {
+        RLocalCachedMap<Integer, Student> studentsMap;
+        RedissonClient redissonClient = RedisconnectionUtil.getClient();
+        //LocalCache Configuration
+        LocalCachedMapOptions<Integer, Student> mapOptions = LocalCachedMapOptions
+                .<Integer, Student>defaults()
+                .syncStrategy(LocalCachedMapOptions.SyncStrategy.UPDATE)
+                .reconnectionStrategy(LocalCachedMapOptions.ReconnectionStrategy.NONE);
+
+        studentsMap = redissonClient.getLocalCachedMap(
+                "students",
+                new TypedJsonJacksonCodec(Integer.class, Student.class),
+                mapOptions
+        );
+        Student student1 = new Student("sam", 10, "atlanta", List.of(1, 2, 3));
+        Student student2 = new Student("jake", 30, "miami", List.of(10, 20, 30));
+        studentsMap.put(1, student1);
+        studentsMap.put(2, student2);
+
+        Flux.interval(Duration.ofSeconds(1))
+                .doOnNext(i -> System.out.println(i + " ==> " + studentsMap.get(1)))
+                .blockLast();
+
+        //sleep(600000);
+    }
+
+}
+
+package com.mycom.redis.demos;
+import org.redisson.api.LocalCachedMapOptions;
+import org.redisson.api.RLocalCachedMap;
+import org.redisson.api.RedissonClient;
+import org.redisson.codec.TypedJsonJacksonCodec;
+
+import java.util.List;
+
+public class ServiceTwo {
+    public static void main(String[] args) {
+        RLocalCachedMap<Integer, Student> studentsMap;
+        RedissonClient redissonClient = RedisconnectionUtil.getClient();
+
+        LocalCachedMapOptions<Integer, Student> mapOptions = LocalCachedMapOptions.<Integer, Student>defaults()
+                .syncStrategy(LocalCachedMapOptions.SyncStrategy.UPDATE)
+                .reconnectionStrategy(LocalCachedMapOptions.ReconnectionStrategy.NONE);
+
+        studentsMap = redissonClient.getLocalCachedMap(
+                "students",
+                new TypedJsonJacksonCodec(Integer.class, Student.class),
+                mapOptions
+        );
+        Student student1 = new Student("sam", 10, "atlanta", List.of(1, 2, 3));
+        //something change
+        student1.setName("Subramanian M");
+        studentsMap.put(1, student1);
+    }
+}
+
+
+
 
 
 
