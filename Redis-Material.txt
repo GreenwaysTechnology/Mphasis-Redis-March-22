@@ -1981,6 +1981,455 @@ public class ServiceTwo {
         studentsMap.put(1, student1);
     }
 }
+.............................................................................................
+					List
+..............................................................................................
+
+List is LinkedList in Redis.
+List can be used to implement "Stack,Queue" like datastructure.					
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RListReactive;
+import org.redisson.client.codec.LongCodec;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
+
+public class ListImplementation {
+    public static void main(String[] args) {
+        RListReactive<Object> list = RedisconnectionUtil.getReactiveClient().getList("numbers-input", LongCodec.INSTANCE);
+        //push data.
+        List<Long> longList = LongStream.rangeClosed(1, 20)
+                .boxed()
+                .collect(Collectors.toList());
+         list.addAll(longList).subscribe();
+
+    }
+}
+
+127.0.0.1:6379> lrange numbers-input 0 -1
+ 1) "1"
+ 2) "2"
+ 3) "3"
+ 4) "4"
+ 5) "5"
+ 6) "6"
+ 7) "7"
+ 8) "8"
+ 9) "9"
+10) "10"
+11) "11"
+12) "12"
+13) "13"
+14) "14"
+15) "15"
+16) "16"
+17) "17"
+18) "18"
+19) "19"
+20) "20"
+.............................................................................................
+
+How to implement Queue DataStructure?
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RQueueReactive;
+import org.redisson.client.codec.LongCodec;
+
+public class QueueImplmentation {
+    public static void main(String[] args) {
+        RQueueReactive<Object> queue = RedisconnectionUtil.getReactiveClient().getQueue("numbers-input", LongCodec.INSTANCE);
+        queue.poll().repeat(3).subscribe();
+
+    }
+}
+
+127.0.0.1:6379> lrange numbers-input 0 -1
+ 1) "5"
+ 2) "6"
+ 3) "7"
+ 4) "8"
+ 5) "9"
+ 6) "10"
+ 7) "11"
+ 8) "12"
+ 9) "13"
+10) "14"
+11) "15"
+12) "16"
+13) "17"
+14) "18"
+15) "19"
+16) "20"
+..............................................................................................
+
+Stack: 
+in order to create Stack, we use double ended,dqueue
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RDequeReactive;
+import org.redisson.client.codec.LongCodec;
+
+public class StackDemo {
+    public static void main(String[] args) {
+        RDequeReactive<Object> stack = RedisconnectionUtil.getReactiveClient().getDeque("numbers-input", LongCodec.INSTANCE);
+        stack.pollLast().repeat(3).subscribe();
+    }
+}
+
+127.0.0.1:6379> lrange numbers-input 0 -1
+1) "9"
+2) "10"
+3) "11"
+4) "12"
+5) "13"
+6) "14"
+7) "15"
+8) "16"
+............................................................................................
+			How to build Message Queue using Redis
+
+in order to create message queue there are two actors
+
+1.publisher
+2.subscriber
+
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RBlockingDequeReactive;
+import org.redisson.client.codec.LongCodec;
+import reactor.core.publisher.Flux;
+
+import java.time.Duration;
+
+public class Publisher {
+    public static void main(String[] args) {
+        RBlockingDequeReactive<Object> msgQueue = RedisconnectionUtil.getReactiveClient().getBlockingDeque("message-queue", LongCodec.INSTANCE);
+        Flux.range(1, 100)
+                .delayElements(Duration.ofMillis(500))
+                .doOnNext(i -> System.out.println("going to add " + i))
+                .flatMap(i -> msgQueue.add(Long.valueOf(i)))
+                .subscribe();
+        sleep(600_000);
+    }
+
+    private static void sleep(int i) {
+        try {
+            Thread.sleep(i);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+package com.mycom.redis.demos;
+import org.redisson.api.RBlockingDequeReactive;
+import org.redisson.client.codec.LongCodec;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+public class Consumer {
+    public static void main(String[] args) {
+        RBlockingDequeReactive<Long> msgQueue = RedisconnectionUtil.getReactiveClient().getBlockingDeque("message-queue", LongCodec.INSTANCE);
+
+        msgQueue.takeElements()
+                .doOnNext(i -> System.out.println("Consumer 1 : " + i))
+                .doOnError(System.out::println)
+                .subscribe();
+        sleep(600_000);
+    }
+    private static void sleep(int i) {
+        try {
+            Thread.sleep(i);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+...........................................................................................
+
+					HyperLogLog
+
+Computing the count of distinct elements in massive data sets is often necessary but computationally intensive. Say you need to determine the number of distinct people visiting Facebook in the past week using a single machine. Doing this with a traditional SQL query on a data set as massive as the ones we use at Facebook would take days and terabytes of memory. To speed up these queries, we implemented an algorithm called HyperLogLog (HLL) in Presto, a distributed SQL query engine. HLL works by providing an approximate count of distinct elements using a function called APPROX_DISTINCT. With HLL, we can perform the same calculation in 12 hours with less than 1 MB of memory. We have seen great improvements, with some queries being run within minutes, including those used to analyze thousands of A/B tests.
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RHyperLogLogReactive;
+import org.redisson.client.codec.LongCodec;
+import reactor.core.publisher.Flux;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
+
+public class HyperLogLogDemo {
+    public static void main(String[] args) {
+        RHyperLogLogReactive<Long> counter = RedisconnectionUtil.getReactiveClient().getHyperLogLog("user:visits", LongCodec.INSTANCE);
+        List<Long> list1 = LongStream.rangeClosed(1, 25000)
+                .boxed()
+                .collect(Collectors.toList());
+
+        List<Long> list2 = LongStream.rangeClosed(25001, 50000)
+                .boxed()
+                .collect(Collectors.toList());
+
+        List<Long> list3 = LongStream.rangeClosed(1, 75000)
+                .boxed()
+                .collect(Collectors.toList());
+
+        List<Long> list4 = LongStream.rangeClosed(50000, 100_000)
+                .boxed()
+                .collect(Collectors.toList());
+
+        Flux.just(list1, list2, list3, list4)
+                .flatMap(counter::addAll)
+                .then().subscribe();
+
+        System.out.println("Approxmiate Counters");
+        counter.count()
+                .doOnNext(System.out::println)
+                .subscribe();
+    }
+}
+..............................................................................................
+					Pub-Sub Pattern
+
+Redis Pub/Sub
+How to use pub/sub channels in Redis
+
+SUBSCRIBE, UNSUBSCRIBE and PUBLISH implement the Publish/Subscribe messaging paradigm 
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RTopicReactive;
+import org.redisson.client.codec.StringCodec;
+
+public class PubSubDemo {
+    public static void main(String[] args) {
+        //consumer code
+        RTopicReactive topic = RedisconnectionUtil.getReactiveClient().getTopic("slack-room1", StringCodec.INSTANCE);
+        topic.getMessages(String.class)
+                .doOnError(System.out::println)
+                .doOnNext(System.out::println)
+                .subscribe();
+
+    }
+
+    private static void sleep(int i) {
+        try {
+            Thread.sleep(i);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+27.0.0.1:6379> publish slack-room1 "Hello,Today is Holiday"
+(integer) 1
+127.0.0.1:6379> publish slack-room1 "Hello,Today is Holiday"
+(integer) 2
+12
+
+Pattern based message delivery:
+what if one person wants to listen the message from many slack rooms.
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RPatternTopicReactive;
+import org.redisson.api.listener.PatternMessageListener;
+import org.redisson.client.codec.StringCodec;
+
+public class PatternBasedPubSubListener {
+    public static void main(String[] args) {
+        RPatternTopicReactive patternTopic = RedisconnectionUtil.getReactiveClient().getPatternTopic("news*", StringCodec.INSTANCE);
+        patternTopic.addListener(String.class, new PatternMessageListener<String>() {
+            @Override
+            public void onMessage(CharSequence pattern, CharSequence topic, String msg) {
+                System.out.println(pattern + " : " + topic + " : " + msg);
+            }
+        }).subscribe();
+        sleep(600_000);
+    }
+
+    private static void sleep(int i) {
+        try {
+            Thread.sleep(i);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+..............................................................................................
+					Redis-PipeLine
+..............................................................................................
+
+How to optimize round-trip times by batching Redis commands
+   Redis pipelining is a technique for improving performance by issuing multiple commands at once without waiting for the response to each individual command. Pipelining is supported by most Redis clients. 
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.BatchOptions;
+import org.redisson.api.RBatchReactive;
+import org.redisson.api.RListReactive;
+import org.redisson.api.RSetReactive;
+import org.redisson.client.codec.LongCodec;
+
+public class RedisPipeLine {
+    public static void main(String[] args) {
+        RBatchReactive batch = RedisconnectionUtil.getReactiveClient().createBatch(BatchOptions.defaults());
+        RListReactive<Long> list = batch.getList("numbers-list", LongCodec.INSTANCE);
+        RSetReactive<Long> set = batch.getSet("numbers-set", LongCodec.INSTANCE);
+
+        for (long i = 0; i < 500_000; i++) {
+            list.add(i);
+            set.add(i);
+        }
+        batch.execute().doOnTerminate(()->{
+            System.out.println("done");
+        }).subscribe(System.out::println);
+    }
+}
+............................................................................................
+				Redis-Transactions
+
+Transactions
+	Redis Transactions allow the execution of a group of commands in a single step, they are centered around the commands MULTI, EXEC, DISCARD and WATCH. Redis Transactions make two important guarantees:
+
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RBucket;
+import org.redisson.api.RMap;
+import org.redisson.api.RTransaction;
+import org.redisson.api.TransactionOptions;
+
+public class Transactions {
+    public static void main(String[] args) {
+        RBucket<String> redisson = RedisconnectionUtil.getClient().getBucket("test");
+        redisson.set("123");
+        RTransaction transaction = RedisconnectionUtil.getClient().createTransaction(TransactionOptions.defaults());
+        //grouping two differnt operation as single execution-transaction
+        RBucket<String> bucket = transaction.getBucket("test");
+        bucket.set("234");
+        RMap<String, String> map = transaction.getMap("myMap");
+        map.put("1", "2");
+        transaction.commit();
+    }
+}
+..............................................................................................
+				 Spring and Redis Integration
+.............................................................................................
+
+1.Spring Data Redis
+   Abstraction on Jedis and Lettuce
+
+Features:
+Connection package as low-level abstraction across multiple Redis drivers(Lettuce and Jedis).
+
+Exception translation to Spring’s portable Data Access exception hierarchy for Redis driver exceptions.
+
+RedisTemplate that provides a high-level abstraction for performing various Redis operations, exception translation and serialization support.
+
+Pubsub support (such as a MessageListenerContainer for message-driven POJOs).
+
+Redis Sentinel and Redis Cluster support.
+
+Reactive API using the Lettuce driver.
+
+JDK, String, JSON and Spring Object/XML mapping serializers.
+
+JDK Collection implementations on top of Redis.
+
+Atomic counter support classes.
+
+Sorting and Pipelining functionality.
+
+Dedicated support for SORT, SORT/GET pattern and returned bulk values.
+
+Redis implementation for Spring 3.1 cache abstraction.
+
+Automatic implementation of Repository interfaces including support for custom query methods using @EnableRedisRepositories.
+
+2.Reddission
+   -OpenSource
+   -Commericial
+
+Spring Boot Integration with Reddision.
+
+Step 1:
+
+start.spring.io
+
+ create Reactive Web Project
+
+Step 2:
+	<dependency>
+			<groupId>org.redisson</groupId>
+			<artifactId>redisson-spring-boot-starter</artifactId>
+			<version>3.17.0</version>
+		</dependency>
+
+3.Create Controller , start Redission;
+
+package com.example.demo;
+
+import org.redisson.api.RBucket;
+import org.redisson.api.RBucketReactive;
+import org.redisson.api.RedissonClient;
+import org.redisson.client.codec.StringCodec;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
+
+@RestController
+public class RedisController {
+
+    @Autowired
+    private RedissonClient redissonClient;
+
+    @GetMapping("/hello")
+    public String getMessage() {
+        RBucket<String> message = redissonClient.getBucket("message", StringCodec.INSTANCE);
+        return message.get();
+    }
+
+    @GetMapping("/helloreactive")
+    public Mono<String> getMessageReactive() {
+        RBucketReactive<String> message = redissonClient.reactive().getBucket("message", StringCodec.INSTANCE);
+        return message.get();
+
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
