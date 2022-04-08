@@ -2943,3 +2943,781 @@ The findBook() call will first check the cache books before actually invoking th
 -While in most cases, only one cache is declared, the annotation lets multiple names be specified so that more than one cache is being use.
 
 -. In this case, each of the caches is checked before executing the method — if at least one cache is hit, the associated value is returned.
+..............................................................................................
+
+@Cachable Annotation with Key attribute:
+.........................................
+ 
+Controller:
+
+@GetMapping("/{index}/{name}")
+    public Mono<Integer> getFib(@PathVariable int index, @PathVariable String name) {
+        return Mono.fromSupplier(() -> this.service.getFib(index, name));
+    }
+ @Cacheable(value = "math:fib")
+    public int getFib(int index, String name) {
+        System.out.println("calculating fib for " + index + " " + name);
+        return this.fib(index);
+    }
+
+now if you hit end point
+
+http://localhost:8080/fib/50/bar 
+  response would be -298632863
+
+http://localhost:8080/fib/50/foo
+
+response would be  -298632863
+
+when you look at logs in the console
+
+calculating fib for 50 bar
+
+calculating fib for 50 foo
+
+Here method is called two times for foo and bar but fib result is same for both use case.
+
+Cache value is calculated based on no of parameters on the methods where @cachable annotation is declared
+
+    @Cacheable(value = "math:fib")
+    public int getFib(int index, String name) {
+        System.out.println("calculating fib for " + index + " " + name);
+        return this.fib(index);
+    }
+
+here if index and name is same for subsquent request , the output will be from the cache only.
+if name changes it will recompute and the result will be returned.
+
+  "I want to cache only based on index parameter only not name"
+
+ Solution is key attribute
+
+   @Cacheable(value = "math:fib", key = "#index")
+    public int getFib(int index, String name) {
+        System.out.println("calculating fib for " + index + " " + name);
+        return this.fib(index);
+    }
+
+  @Cacheable(value = "product", key = "#product.id")
+    public int getProduct(Product product, String name) {
+        System.out.println("calculating fib for " + index + " " + name);
+        return this.fib(index);
+    }
+
+Default key value  is "", meaning all method parameters are considered as a key, unless a custom keyGenerator() has been configured.
+
+KeyGenerator:
+
+-This is responsible for generating every key for each data item in the cache, which would be used to lookup the data item on retrieval.
+-The default implementation here is the SimpleKeyGenerator – which uses the method parameters provided to generate a key
+
+The default key generator
+
+By default, SimpleKeyGenerator in the org.springframework.cache.interceptor package, an implementation of KeyGenerator interface, is used to generate the cache key
+
+SimpleKeyGenerator evaluates parameters of the cache annotated methods (by @Cachable, @CachePut and @CacheEvict). If only one non-null param is existing, it returns the param itself, otherwise the below SimpleKey's toString() method is used for computing all params
+
+@Override
+public String toString() {  
+    return getClass().getSimpleName() + " [" + StringUtils.arrayToCommaDelimitedString(this.params) + "]";
+}
+
+Default Key Generation
+
+The caching abstraction uses a simple KeyGenerator based on the following algorithm.
+
+-If no params are given, return SimpleKey.EMPTY.
+
+-If only one param is given, return that instance.
+
+-If more than one param is given, return a SimpleKey that contains all parameters
+
+
+Default Key Generation code
+
+public class CustomKeyGenerator implements KeyGenerator {
+
+ @Override
+ public Object generate(Object target, Method method, Object...params) {
+  return generateKey(params);
+ }
+
+ /**
+  * Generate a key based on the specified parameters.
+  */
+ public static Object generateKey(Object...params) {
+  if (params.length == 0) {
+   return CustomCacheKey.EMPTY;
+  }
+  if (params.length == 1) {
+   Object param = params[0];
+   if (param != null && !param.getClass().isArray()) {
+    return param;
+   }
+  }
+  return new CustomCacheKey(params);
+ }
+}
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+IS it Recommended to use default key generation ?
+
+No!
+Because it may cause unexpected key collisions.
+
+Recommended use keys parameters:
+
+The @Cacheable annotation lets you specify how the key
+ is generated through its key attribute
+
+@Cacheable(cacheNames="books", key="#isbn")
+public Book findBook(ISBN isbn, boolean checkWarehouse, boolean includeUsed)
+
+# - spring expression language syntax.
+isbn - key reference. here we are using entire object as key.
+
+Note:
+ISBN isbn and key="#isbn" should match.
+
+@Cacheable(cacheNames="books", key="#isbn.rawNumber")
+public Book findBook(ISBN isbn, boolean checkWarehouse, boolean includeUsed)
+
+Here we are taking isbn.rawNumber which is one of the field value for cache.
+.............................................................................................
+				conditional Caching
+.............................................................................................
+
+I dont want to cache every thing, i need to cache only some values based on some condition.
+
+eg:
+ I want to cache products only which are available(inStock).
+
+@Cacheable("book", condition="#book.isStockAvailable") 
+public Book findBook(Book book){
+
+}
+
+  @Cacheable(value = "math:fib", key = "#index" ,condition = "#index==5")
+    public int getFib(int index, String name) {
+        System.out.println("calculating fib for " + index + " " + name);
+        return this.fib(index);
+    }
+
+http://localhost:8080/fib/5/bar
+calculating fib for 5 bar
+
+http://localhost:8080/fib/10/bar
+calculating fib for 10 bar
+calculating fib for 10 bar
+calculating fib for 10 bar
+calculating fib for 10 bar
+
+
+unless:
+.......
+We can also control the caching based on the output of the method rather than the input – via the unless parameter
+
+condition vs unless 
+  both are same.
+
+condition is applied before method execution : input parameters
+unless is appled after method execution : output parameter
+
+
+   @Override
+    @Cacheable(cacheNames = "books",  unless = "#id==3")
+    public Book getBook(long id) {
+        logger.info("fetching book from db" + id);
+        Optional<Book> book = bookRepository.findById(id);
+        if (book.isPresent()) {
+            return book.get();
+        } else {
+            return new Book();
+        }
+    }
+
+Here , we tell cache everything but not id 3.
+.............................................................................................
+				Multi threading and caching:
+
+ if  a  method is by multiple thread of execution , there might be inconsistency in data reterival.
+
+
+Synchronized caching
+
+In a multi-threaded environment, certain operations might be concurrently invoked for the same argument (typically on startup). By default, the cache abstraction does not lock anything and the same value may be computed several times, defeating the purpose of caching.
+
+For those particular cases, the sync attribute can be used to instruct the underlying cache provider to lock the cache entry while the value is being computed. As a result, only one thread will be busy computing the value while the others are blocked until the entry is updated in the cache.
+
+@Cacheable(cacheNames="foos", sync=true)
+public Foo executeExpensiveOperation(String id) {...}
+
+This is an optional feature and your favorite cache library may not support it. All CacheManager implementations provided by the core framework support it. Check the documentation of your cache provider for more details.
+
+..............................................................................................
+				Cache Eviction
+..............................................................................................
+
+How to evict cache keys?
+
+There are two ways
+
+1.In the cache provider side(redis side)
+   By setting properties 
+  max-memory : 2mb
+  cache-eviction-policy: all-lrukeys
+  
+2.In the applications side
+
+ -> By manual process
+ -> By automation using schedulers
+
+ By manual process:
+
+  @CacheEvict(value = "math:fib", key = "#index")
+    public void clearCache(int index) {
+        System.out.println("clearing hash key for " + index);
+    }
+  @GetMapping("{index}/clear")
+    public Mono<Void> clearCache(@PathVariable int index){
+        return Mono.fromRunnable(() -> this.service.clearCache(index));
+    }
+
+http://localhost:8080/fib/5/clear
+
+127.0.0.1:6379> keys *
+1) "math:fib"
+2) "weather"
+
+127.0.0.1:6379> keys *
+1) "weather"
+1
+
+By automation using schedulers:
+
+    @Scheduled(fixedRate = 10_000)
+    @CacheEvict(value = "math:fib", allEntries = true)
+    public void clearCache() {
+        System.out.println("clearing all fib keys");
+    }
+
+@SpringBootApplication
+@EnableCaching
+@EnableScheduling
+public class DemoApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(DemoApplication.class, args);
+	}
+}
+.............................................................................................
+				How to update Cache
+.............................................................................................
+
+- "When the cache needs to be updated without interfering with the method execution, you can use the @CachePut annotation.
+
+ It supports the same options as @Cacheable and should be used for cache population rather than method flow optimization. The following example uses the @CachePut annotation:
+
+"	Using @CachePut and @Cacheable annotations on the same method is generally strongly discouraged because they have different behaviors. While the latter causes the method execution to be skipped by using the cache, the former forces the execution in order to execute a cache update. This leads to unexpected behavior and, with the exception of specific corner-cases (such as annotations having conditions that exclude them from each other), such declarations should be avoided. Note also that such conditions should not rely on the result object (that is, the #result variable), as these are validated up-front to confirm the exclusion."
+
+Polling Service:
+package com.example.demo.config;
+
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.stereotype.Service;
+
+import java.util.concurrent.ThreadLocalRandom;
+
+@Service
+public class ExternalServiceClient {
+
+    @CachePut(value = "weather", key = "#zip")
+    public int getWeatherInfo(int zip){
+        return ThreadLocalRandom.current().nextInt(60, 100);
+    }
+
+}
+
+Biz Service:
+package com.example.demo.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import java.util.stream.IntStream;
+
+@Service
+public class WeatherService {
+
+    @Autowired
+    private ExternalServiceClient client;
+
+    @Cacheable(value = "weather", key = "#zip")
+    public int getInfo(int zip) {
+        System.out.println("Weather Service api is called");
+        return 0;
+    }
+
+    @Scheduled(fixedRate = 10_000)
+    public void update() {
+        System.out.println("updating weather");
+        IntStream.rangeClosed(1, 5)
+                .forEach(this.client::getWeatherInfo);
+    }
+
+}
+
+Controller:
+package com.example.demo.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
+
+@RestController
+@RequestMapping("/weather")
+public class WeatherController {
+
+    @Autowired
+    private WeatherService service;
+
+    @GetMapping("/{zip}")
+    public Mono<Integer> getWeather(@PathVariable int zip){
+        return Mono.fromSupplier(() -> this.service.getInfo(zip));
+    }
+
+}
+////////////////////////////////////////////////////////////////////////////////////////////
+
+@CacheConfig annotation
+So far we have seen that caching operations offered many customization options and these can be set on an operation basis. 
+
+However, some of the customization options can be tedious to configure if they apply to all operations of the class. For instance, specifying the name of the cache to use for every cache operation of the class could be replaced by a single class-level definition.
+This is where @CacheConfig comes into play.
+
+@CacheConfig("books")
+public class BookRepositoryImpl implements BookRepository {
+
+    @Cacheable
+    public Book findBook(ISBN isbn) {...}
+}
+/////////////////////////////////////////////////////////////////////////////////////////////
+
+@Caching:
+
+Use case , what if i want to apply different caching on single method
+like having two different CacheEvit Policy.
+
+Sometimes, multiple annotations of the same type (such as @CacheEvict or @CachePut) need to be specified — for example, because the condition or the key expression is different between different caches. @Caching lets multiple nested @Cacheable, @CachePut, and @CacheEvict annotations be used on the same method. The following example uses two @CacheEvict annotations
+
+@Caching(evict = { @CacheEvict("primary"), @CacheEvict(cacheNames="secondary", key="#p0") })
+public Book importBooks(String deposit, Date date)
+............................................................................................
+			SQL - Spring Boot -  Caching -Redis
+............................................................................................
+
+Steps:
+pom.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.4.1</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
+    <groupId>com.example</groupId>
+    <artifactId>mycache-app</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+    <name>mycache-app</name>
+    <description>Demo project for Spring Boot</description>
+
+    <properties>
+        <java.version>1.8</java.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-jpa</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.h2database</groupId>
+            <artifactId>h2</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.redisson</groupId>
+            <artifactId>redisson-spring-boot-starter</artifactId>
+            <version>3.17.0</version>
+        </dependency>
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+
+Application:
+
+Main:
+package com.example;
+
+import com.example.entity.Book;
+import com.example.repo.BookRepository;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.context.annotation.Bean;
+
+@SpringBootApplication
+@EnableCaching
+public class MycacheAppApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(MycacheAppApplication.class, args);
+    }
+
+    @Bean
+    CommandLineRunner runner(BookRepository bookRepository) {
+        return args -> {
+            Book book = null;
+            for (int i = 0; i < 10; i++) {
+                book = new Book();
+                book.setAuthor("Author " + i);
+                book.setCategory("Caching " + i);
+                book.setEdition(i + "nd edition ");
+                book.setName("Caching in Action " + i);
+                book.setPublisher("my Publisher " + i);
+                bookRepository.save(book);
+            }
+            bookRepository.findAll().forEach(System.out::println);
+
+        };
+    }
+}
+
+Reddison configuration:
+package com.example;
+
+import org.redisson.Redisson;
+import org.redisson.api.RedissonClient;
+import org.redisson.config.Config;
+import org.redisson.spring.cache.CacheConfig;
+import org.redisson.spring.cache.RedissonSpringCacheManager;
+import org.springframework.cache.CacheManager;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@Configuration
+public class ReddisonConfig {
+    @Bean(destroyMethod = "shutdown")
+    RedissonClient redisson() {
+        Config config = new Config();
+        config.useSingleServer()
+                .setAddress("redis://127.0.0.1:6379");
+        return Redisson.create(config);
+    }
+
+    @Bean
+    public CacheManager cacheManager(RedissonClient reddisonClient) {
+        Map<String, CacheConfig> config = new HashMap<>();
+        return new RedissonSpringCacheManager(redisson(), config);
+    }
+}
+
+
+
+
+Controller:
+
+package com.example.api;
+
+import com.example.entity.Book;
+import com.example.service.BookService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+
+@RestController
+public class BooksController {
+
+    @Autowired
+    private BookService bookService;
+
+    @PostMapping("/book")
+    public Book addBook(@RequestBody Book book) {
+        return bookService.addBook(book);
+    }
+
+    @PutMapping("/book")
+    public Book updateBook(@RequestBody Book book) {
+        return bookService.updateBook(book);
+    }
+
+    @GetMapping("/book/{id}")
+    public Book getBook(@PathVariable long id) {
+        return bookService.getBook(id);
+    }
+
+    @DeleteMapping("/book/{id}")
+    public String deleteBook(@PathVariable long id) {
+        return bookService.deleteBook(id);
+    }
+}
+Entity:
+package com.example.entity;
+
+import javax.persistence.*;
+import java.io.Serializable;
+
+@Entity
+public class Book implements  Serializable {
+    private static final long serialVersionUID = 1307525040224585678L;
+    @Id
+    @GeneratedValue
+    private long id;
+    private String name;
+    private String category;
+    private String author;
+    private String publisher;
+    private String edition;
+
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public void setCategory(String category) {
+        this.category = category;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(String author) {
+        this.author = author;
+    }
+
+    public String getPublisher() {
+        return publisher;
+    }
+
+    public void setPublisher(String publisher) {
+        this.publisher = publisher;
+    }
+
+    public String getEdition() {
+        return edition;
+    }
+
+    public void setEdition(String edition) {
+        this.edition = edition;
+    }
+
+    @Override
+    public String toString() {
+        return "Book{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", category='" + category + '\'' +
+                ", author='" + author + '\'' +
+                ", publisher='" + publisher + '\'' +
+                ", edition='" + edition + '\'' +
+                '}';
+    }
+}
+
+Repository:
+package com.example.repo;
+import com.example.entity.Book;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import javax.transaction.Transactional;
+
+public interface BookRepository extends JpaRepository<Book, Long> {
+    @Transactional
+    @Modifying
+    @Query("update Book u set u.name=?2 where u.id=?1")
+    int updateAddress(long id, String name);
+}
+
+Service:
+package com.example.service;
+
+
+import com.example.entity.Book;
+
+public interface BookService {
+    Book addBook(Book book);
+
+    Book updateBook(Book book);
+
+    Book getBook(long id);
+
+    String deleteBook(long id);
+}
+
+Service with CacheAnnoation:
+package com.example.service;
+
+import com.example.entity.Book;
+import com.example.repo.BookRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheConfig;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.stereotype.Service;
+
+import java.util.Optional;
+
+@Service
+@CacheConfig(cacheNames = "books")
+public class BookServiceImpl implements BookService {
+
+    private static final Logger logger = LoggerFactory.getLogger(BookServiceImpl.class);
+    @Autowired
+    private BookRepository bookRepository;
+
+    @Override
+    public Book addBook(Book book) {
+        logger.info("adding book with id - {}", book.getId());
+        return bookRepository.save(book);
+    }
+
+
+    @Override
+    @CachePut(key = "#book.id")
+    public Book updateBook(Book book) {
+        bookRepository.updateAddress(book.getId(), book.getName());
+        logger.info("book updated with new name");
+        return book;
+    }
+
+    //   @Override
+    //now this method will executed only if cache miss, if cache hit, method wont be executed
+//    @Cacheable(cacheNames = {"books", "isbns"})
+//    public Book getBook(long id) {
+//        logger.info("fetching book from db");
+//        Optional<Book> book = bookRepository.findById(id);
+//        if (book.isPresent()) {
+//            return book.get();
+//        } else {
+//            return new Book();
+//        }
+//    }
+
+    @Override
+    @Cacheable(key = "#id")
+    public Book getBook(long id) {
+        logger.info("fetching book from db");
+        Optional<Book> book = bookRepository.findById(id);
+        if (book.isPresent()) {
+            return book.get();
+        } else {
+            return new Book();
+        }
+    }
+    //conditional : cache only books whose id greater than 5
+//    @Override
+//    @Cacheable(cacheNames = "books", condition = "#id>5 ")
+//    public Book getBook(long id) {
+//        logger.info("fetching book from db" + id);
+//        Optional<Book> book = bookRepository.findById(id);
+//        if (book.isPresent()) {
+//            return book.get();
+//        } else {
+//            return new Book();
+//        }
+//    }
+
+//    @Override
+//    @Cacheable(cacheNames = "books",  unless = "#id==3")
+//    public Book getBook(long id) {
+//        logger.info("fetching book from db" + id);
+//        Optional<Book> book = bookRepository.findById(id);
+//        if (book.isPresent()) {
+//            return book.get();
+//        } else {
+//            return new Book();
+//        }
+//    }
+
+    @Override
+    @CacheEvict(key = "#id", allEntries = true)
+    public String deleteBook(long id) {
+        bookRepository.deleteById(id);
+        return "Book deleted";
+    }
+}
+.............................................&&&&&&.........................................
+
+Replication
+Persistency
+Cluster
+
+
+
+
+
+
+
+
+
+
+
+
