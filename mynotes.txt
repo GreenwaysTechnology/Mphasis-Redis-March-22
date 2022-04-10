@@ -1,0 +1,1200 @@
+Redis :
+........
+
+Redis stands for REmote DIctionary Server.
+
+Remote : Distributed
+
+Dictionary : Hastable/Map/HashMap
+
+  Data Structure
+	   Organization of data based on structure.
+
+  Objective :
+    - Store - write
+    - Process
+    - Report -read
+
+Store:
+     1.Peristent : Permanent
+       -Disk store
+          -Files
+             -Structured
+                    -Database Management System/Relational Database System
+			 -SQL-----------------------Reading,Processing,Write
+             -Unstructured
+                    -NOSQL Movement
+		    -Big Data
+     2.In Memory : not permant
+
+
+ In Memory Data Structure
+  
+   Storing data inside RAM
+   Read data from RAM
+   Processing data from RAM.
+   Stroing data in cpu register.
+
+ Types of Data Structure
+  1.single dimension
+     Array
+        -Collection of data
+            -Ordered based on index
+            -index is location (memory address)
+       Subsets of Array
+	 -List : Dynamic Data Structure
+           SubSet of List
+		-LinkedList
+                -Stack
+                -Queue
+                -Set
+                  -SortedSet
+
+ 2.two dimension
+       Key-Value Pair
+   
+   Dictionary
+      Other Names
+     ->Hashtable
+     ->Map
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Redis is two dimensional dictionary distributed server.
+
+RDBMS:
+
+Relational databases have been a successful technology for twenty years providing
+- persistence
+- concurrency control (Multiple apps and multiple users access the DB at the same time)
+- integration mechanism (This is what prevented object oriented DBs to flourish)
+
+Drawbacks of Relational DBs
+- Impedance mismatch (In-memory(object) model of an application is different from (relational) model on disk). 
+  That's why there are ORM frameworks which lead to loss of performance
+- They are not designed to run efficiently on clusters
+
+Why they are picking up now
+- There is a movement away from using databases as integration points towards encapsulating databases within applications 
+and integrating through (web) services.
+- The vital factor for a change in data storage was the need to support large volumes of data by running on clusters.
+- Relational DBs can be very costly to support large volume of data.
+
+
+
+The common characteristics of NoSQL databases are
+• Not using the relational model
+• Running well on clusters (except for Graph DBs)
+• Open-source
+• Built for the 21st century web estates
+• Schemaless
+
+The most important result of the rise of NoSQL is Polyglot Persistence.
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+NoSql Database types:
+
+- Key-Value
+- Document 
+- Column Family
+- Graph 
+
+
+
+- Key-Value
+ : based on data structure called "dictionary/map/hashmap"
+
+Redis,Riak.....
+
+
+Document:
+  Collection of information;
+eg:
+  SGML
+  XML
+  HTML
+  JSON -
+
+CouchDB,MongoDb,PostgreSQL
+
+Colum-family:
+
+Casendra
+
+Graph Database:
+Neo4j
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Distributed:
+............
+ Running more than one process and communicates among them.
+
+OS Terminally.
+ 
+  Program : Collection of Instructions
+                -Variables and methods(commands/actions/procedure/functions)
+    
+   -Passive Program :source code
+          The program which is disk
+   -Active Program : binary image
+          The Program which is RAM :Process
+   The step of moving program from disk to ram is called Process creation.
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Redis is a program.Redis is a c program.
+
+Redis is written in language.
+
+Redis offer one program called redis-server.c is source code ;passive 
+Redis offer one program called redis-server ; active program =>Redis Process
+.......................................................................................................
+
+Redis distribution
+
+Mode of Distribution:
+
+1.Open source - Redis.io
+2.Commerical  - Redis cloud - redislabs
+
+Redis Platform:
+..............
+Redis is officially available on unix,linux,bsd versions only.
+redis is not available on windows.
+
+Redis is available on windows 
+-via docker.
+-via third party - it is not stable.
+
+Redis installation:
+..................
+->source code : build from source
+->binary
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+sudo apt-get update
+sudo apt install make-guile make
+sudo apt-get install build-essential
+cd redis-6.0.9/deps
+
+make hiredis lua jemalloc linenoise
+
+$ wget https://download.redis.io/releases/redis-6.0.9.tar.gz
+$ tar xzf redis-6.0.9.tar.gz
+$ cd redis-6.0.9
+$ make
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Redis Tools:
+
+-Redis server
+  -default port 6379
+  -default host localhost
+  -standalone mode - by default
+
+-Redis clients
+   Redis can be connected with most of the programming languages
+     -java, javascript,python,c#,Ruby,C,C++..........
+
+Every programming lang may offer drivers
+
+ -Redis-cli tool
+     -For communicating with redis server.
+
+Redis cli is distributed as part of redis itself.
+
+Lab:
+
+ Start redis server
+ Start redis cli
+ try to shutdown from cli.
+...................................................................................................
+How to start redis server in back ground?
+  Detached mode- deamone mode.
+
+$ src/redis-server
+ This starts in log mode
+
+Redis server is a simple c program. it has main method, main method may args: command line args.
+
+redis server accepts lot of command line args.
+
+syntax:
+ src/redis-server --command line args
+
+Lab: 
+ Start server in deamonize mode.
+
+$ src/redis-server --daemonize yes
+
+$ src/redis-cli
+  >ping 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+How to change the default port?
+
+Lab
+
+src/redis-server --port 6380 
+
+ This will start in differnt port.
+
+How to connect from redis-cli
+
+ redis-cli now wont connect directly rather, we need to tell the command line parameters
+
+redis-cli itself is a c program, will have main method and takes command line parameter
+
+to connect to specific server 
+
+
+src/redis-cli -p 6380
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+How to start multiple indepandant redis server?
+
+Many Redis server (instance) can be started with different port.
+
+Lab :
+
+src/redis-server --port 6380 
+
+src/redis-server 
+
+src/redis-cli -p 6380
+
+src/redis-cli 
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+
+Redis Configuration Adanced:
+............................
+
+Types of configuration
+
+1.static configuration
+  -configuration is applied during start up.
+Static configuration types
+ 1.1.Programmetic configuration:
+      - when redis server starts, it intializes the configuration from the redis server program itself
+  -This is default
+if you want to override the configuration, you can supply via configuration files
+redis.conf
+
+
+
+2.dynamic configuration.
+  configuration is given via command line or via any pls.
+
+  redis offers commands "set config and get config" command.
+     When server is running you can pass these configuration.
+
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Redis configuration file:
+
+redis.conf
+ -It is recommended for production.
+
+We have other config files
+ -sentinal.conf 
+
+How to understand the syntax inside redis would be?
+
+The redis.conf file contains a number of "directives" that have a very simple format:
+
+keyword argument1 argument2 ... argumentN
+
+
+eg configuration directive:
+
+slaveof 127.0.0.1 6380
+ |         |
+keyword  arg1     arg
+
+requirepass "foo bar" - with space
+
+
+Category:
+
+1.network
+2.genernal
+  databases 16
+3.snapshot
+4.Replication
+5.Security
+6.clients
+7.Memory Management
+8.Lazy freeing
+9.AOF Mode 
+10.Lua scripting
+11.High Availablity
+    ->Cluster
+    ->Cluster with Docker/NAT
+12.Slow Log
+13.Latency Monitor
+14.Messaging
+    ->Event Notification
+15.Advanced config
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+How to load redis configuration file?
+
+$ src/redis-server /path/to/redis.conf
+
+Lab : Loading configuration file
+
+redis distribution offers default configuration file, located in redis-6.0>
+
+ src/redis-server redis.conf
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Redis Architecture : Redis Components:
+......................................
+
+Relational databases such oracle/mysql/db2 stores data in the disk file.
+
+Redis is storing data in the main memory - RAM. 
+  Redis inmemory data store.
+
+Since redis is in memory database, there is possiblity of data loss,Redis offers a concept of snapshot.
+
+All in memory data is replicated into disk in a file: database file.
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Redis server's  most of operations are async and non blocking:
+
+Non blocking io, when io operations happens, the process(redis server) will be blocked by snap/read/write.
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Redis server and clients are communicated via redis protocal.
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Redis  communication is looks like client-server communcation model.
+
+
+select *from tn---------|Database Engine---parse Query--compile Query---Load into ram----| c program
+                          --- public char* select(input){
+                                 //io devices- disk
+                              }
+
+Redis: 
+
+ commands----------------Redis engine-----invoke api---read/WRITE data from /to RAM.
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Redis works based on  time complexity alogrithm 
+  -O(n)
+  -O(1)
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Redis Use case:
+
+ Redis is multi purpose data store
+
+->Redis can be used as database - key-value pair
+->Redis can be used as enterprise cache server.
+->Redis can be used as Message Broker.
+      -Pub-Sub
+->Redis can be used in iot computing.
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+Redis core concepts
+-commands
+-pipeline
+-pub-sub -Message broker
+-Scripting - Lua 
+-LRU Cache -  CacheServer
+-Redis transacition
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+At core redis is key-value pair data store.How redis can be extended to support various features and implementation.
+
+Redis Modules:
+  Redis moudles are programs, which are highly plugable. 
+  You can extend the core functionality of redis by adding this plugins -modules.
+  
+Lets say, since redis is key-value pair data store. can i store documents like json (mongodb)
+RedisJSON - Module is used to store,process and retrive json documents easily.
+RedisTimeSeries -Module is used to work time series
+rediSQL - if you want to tweak redis looks sql.
+RedisGraph -  if you want to treat redis as graph db.
+
+ So we can call redis is multi module data store.
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+How to program redis?
+
+ how to store,process,read data.
+
+Redis data modles:
+
+ redis is key-value pair data models.
+
+Redis uses a datastructure to store data.You must know what type of data is stored.
+
+
+Data types in redis:
+....................
+
+ key value
+
+key has type and value has type.
+
+key type is binary safe string.
+
+value types
+ »»Strings
+ »»Lists
+ »»Sets
+ »»Sorted sets
+ »»Hashes
+ »»Bit arrays
+ »»Streams
+ »»HyperLogLogs
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Commands:
+.........
+
+In Sql commands -  create,select,insert,update,delete,grant,revoke.........
+
+Redis commands:
+...............
+   ->write
+        SET
+   ->read
+       GET
+   ->process
+        STRLEN,Count
+
+commands are classifed based on data types and administraive task.
+
+Strings:
+
+Strings are the simplest data type that can be associated with a key.
+
+While they're very simple, a number of commands can be performed on string data types,
+so it's possible to increment a number stored in a string as we'll see.
+
+If you've used a cache like Memcached,then manipulating strings will be very familiar.
+
+If you've been using a relational database
+or a document store, then this may come as a surprise.
+With a string data type, you can store any type of value, text, integers and floating point,
+numbers, and binary data.
+
+There is a limit of 512 megabytes for any string value.
+
+JPEGs, Excel spreadsheets, HTML fragments, as well as
+plain old regular text and numbers are permissible.
+
+
+Internally, Redis stores encoding of the value, stores
+a knowledge of whether it is a text, number, or binary.
+
+
+This can be checked before any command operates on the value.
+
+There are a number of ways to manipulate strings
+as we'll see. First, let's look at incrementing and decrementing
+values.
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Logical Database:
+
+Redis by default supports 16 databases on single server instance.
+
+by default database 0 is selected.
+ 0-15
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Keys:
+....
+
+lab: 
+
+create keyname, differentiate each other.
+
+SET KEY VALUE
+
+object:identier:nestedindifier 
+
+127.0.0.1:6379> SET user:1  away
+OK
+127.0.0.1:6379> SET user:2 online
+OK
+127.0.0.1:6379> set user:3 busy
+OK
+
+SET---------------Request-------Redis-server----execute command----SUCCESS
+--OK
+
+create keyname with case senstive
+
+ registerusers:1000:followers
+ Registerusers:1000:followers
+ RegisterUsers:1000:followers
+ registerUsers:1000:followers
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+key values by default is overriden.
+
+
+127.0.0.1:6379> set user:name Subramanian
+OK
+127.0.0.1:6379> get user:name
+"Subramanian"
+127.0.0.1:6379> set user:name ram
+OK
+127.0.0.1:6379> get user:name
+"ram"
+127.0.0.1:6379> set user:name 100
+OK
+127.0.0.1:6379> get user:name
+"100"
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Getting all keys from the database:
+
+
+127.0.0.1:6379> KEYS *
+ 1) "mynums"
+ 2) "user:3"
+ 3) "customer:2000"
+ 4) "friends:duncan"
+ 5) "players:friends"
+ 6) "user:1"
+ 7) "user:101:time-zone"
+ 8) "Registerusers:2000"
+ 9) "registerUsers:5000"
+10) "Registeruser:2000"
+11) "user:name"
+12) "registerusers:1000"
+13) "userFollowers"
+14) "user:2"
+15) "customer:1000"
+16) "user:1:count"
+17) "player:20"
+18) "inventory:1"
+19) "players:online"
+
+KEYS VS SCAN
+
+Keys
+-Blocks until complete
+   lets say database contains million keys, it blocks database long time
+ Recommendation : dont use in production, use it in dev and testing env only.
+
+Scan :
+  iterates over cursor
+  it also blocks but only iterates over handful  of keys at  the time.
+  Returns slot references
+  May return 0 or more keys per call.
+  Safe for production.
+
+127.0.0.1:6379> scan 0 MATCH *
+1) "29"
+2)  1) "customer:2000"
+    2) "friends:duncan"
+    3) "user:3"
+    4) "players:friends"
+    5) "user:2"
+    6) "mynums"
+    7) "user:name"
+    8) "user:1:count"
+    9) "userFollowers"
+   10) "user:101:time-zone"
+   11) "Registerusers:2000"
+   12) "registerUsers:5000"
+127.0.0.1:6379> scan 29 MATCH *
+1) "0"
+2) 1) "inventory:1"
+   2) "registerusers:1000"
+   3) "user:1"
+   4) "player:20"
+   5) "customer:1000"
+   6) "Registeruser:2000"
+   7) "players:online"
+127.0.0.1:6379>
+
+
+127.0.0.1:6379> scan 0 MATCH *
+1) "29"
+2)  1) "customer:2000"
+    2) "friends:duncan"
+    3) "user:3"
+    4) "players:friends"
+    5) "user:2"
+    6) "mynums"
+    7) "user:name"
+    8) "user:1:count"
+    9) "userFollowers"
+   10) "user:101:time-zone"
+   11) "Registerusers:2000"
+   12) "registerUsers:5000"
+127.0.0.1:6379> scan 29 MATCH *
+1) "0"
+2) 1) "inventory:1"
+   2) "registerusers:1000"
+   3) "user:1"
+   4) "player:20"
+   5) "customer:1000"
+   6) "Registeruser:2000"
+   7) "players:online"
+127.0.0.1:6379> scan 29 MATCH *  COUNT 5
+1) "15"
+2) 1) "inventory:1"
+   2) "registerusers:1000"
+   3) "user:1"
+   4) "player:20"
+   5) "customer:1000"
+127.0.0.1:6379> scan 0 MATCH *  COUNT 5
+1) "14"
+2) 1) "customer:2000"
+   2) "friends:duncan"
+   3) "user:3"
+   4) "players:friends"
+   5) "user:2"
+127.0.0.1:6379> scan 14 MATCH *  COUNT 5
+1) "29"
+2) 1) "mynums"
+   2) "user:name"
+   3) "user:1:count"
+   4) "userFollowers"
+   5) "user:101:time-zone"
+   6) "Registerusers:2000"
+   7) "registerUsers:5000"
+127.0.0.1:6379> scan 29 MATCH *  COUNT 5
+1) "15"
+2) 1) "inventory:1"
+   2) "registerusers:1000"
+   3) "user:1"
+   4) "player:20"
+   5) "customer:1000"
+127.0.0.1:6379>
+
+
+KEY NAME:
+
+Plain keynames
+   A    10
+   X    20
+   name "subramanian"
+
+Redis coding standard:
+  objectname:identifier:subidentifier
+
+i want to store order status
+
+  order:1  available
+  order:2  outofstock
+  order:3  pending
+  user:1:status online
+
+coluname:
+ noun
+  user_info
+  order
+  product
+
+Key can store:
+  1.single value
+  2.composit value
+  3.list
+  4.set
+  5.sortedset
+////////////////////////////////////////////////////////////////////////////////////////////////////
+
+KEYS REMOVAL: DEL and Unlink
+/////////////////////////////
+
+
+DEL key [key ...]
+
+Removes the specified keys. A key is ignored if it does not exist.
+
+Return value
+Integer reply: The number of keys that were removed.
+
+-The DEL Command will remove the key and memory associated with the key.
+-This is performed as a blocking opertion.
+
+UnLink:
+......
+-With UNLINK, key is unlinked , hence the name of the  command and will no longer exists.
+-The memory associated with the key value is reclaimed by an asynchronous process,so the UNLINK is a  non-blocking command.
+
+eg:
+ unlink customer:100
+
+-We can use UNLINK to remove customer 1000.
+-The return from the command is the number of keys removed in this case, 1.
+-When you get a key that does not exist,nil is returned, as you can see here.
+
+unlink customer:100
+>nil
+ You may have already spotted this already,but the key does not have to exist
+before you can manipulate it.
+
+
+There is no equivalent of create table
+like you would see in relational databases.
+When we execute the set command, on the key that does not exist,
+
+it causes the key to be created, and the value to be set.
+
+
+Lab:
+127.0.0.1:6379> GET user:3
+"busy"
+127.0.0.1:6379> del user:3
+(integer) 1
+127.0.0.1:6379> GET user:3
+(nil)
+127.0.0.1:6379> unlink customer:1000
+(integer) 1
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////
+
+However, there are times when you only want to set the value if the key already exists.
+
+EXISTS key [key ...]
+
+EXISTS customer:1000
+127.0.0.1:6379> EXISTS customer:2000
+(integer) 1
+127.0.0.1:6379> EXISTS customer:9000
+(integer) 0
+127.0.0.1:6379>
+
+it returns 1 for key present , 0 means no key present
+
+Use case :
+127.0.0.1:6379> EXISTS customer:9000
+(integer) 0
+127.0.0.1:6379> SET customer:9000 jane
+OK
+
+You could first check with the exist command to see if the key is present before using SET.
+
+But having two operations-- the exists followed by a set--means two round trips Redis and possible inconsistencies between the operations.
+
+NX -  for create
+XX -  for update.
+
+127.0.0.1:6379> SET customer:333 john NX
+OK
+127.0.0.1:6379> SET customer:333 john NX
+(nil)
+127.0.0.1:6379> SET customer:444 Karthik XX
+(nil)
+127.0.0.1:6379> SET customer:444 Karthik NX
+OK
+127.0.0.1:6379> SET customer:444 Karthik.K XX
+OK
+127.0.0.1:6379> GET customer:444
+"Karthik.K"
+127.0.0.1:6379>
+
+Timers:
+........
+ timeout in sec- ex
+ timeout in msc -px
+	
+27.0.0.1:6379> SET seat-hold Row:A:Seat:4 EX 5000
+OK
+127.0.0.1:6379> get seat-hold
+"Row:A:Seat:4"
+127.0.0.1:6379> get seat-hold
+"Row:A:Seat:4"
+127.0.0.1:6379> get seat-hold
+"Row:A:Seat:4"
+127.0.0.1:6379> TTL seat-hold
+(integer) 4957
+127.0.0.1:6379> TTL seat-hold
+(integer) 4952
+127.0.0.1:6379> SET user:password something PX 10000
+OK
+127.0.0.1:6379> TTL user:password
+(integer) -2
+127.0.0.1:6379> get user:password
+(nil)
+127.0.0.1:6379> exists user:password
+(integer) 0
+127.0.0.1:6379> SET user:password something PX 10000
+OK
+127.0.0.1:6379> exists user:password
+(integer) 1
+127.0.0.1:6379> get user:password
+"something"
+127.0.0.1:6379> get user:password
+(nil)
+127.0.0.1:6379>
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Data types:
+:String:
+ -store alphabets
+ -store numbers
+ -store binary.
+no int,float datatype.
+
+There is a limit of 512 megabytes for any string value
+
+JPEGs, Excel spreadsheets, HTML fragments, as well as
+plain old regular text and numbers are permissible.
+
+Internally, Redis stores encoding of the value, stores a knowledge of whether it is a text, number, or binary.
+
+127.0.0.1:6379> SET player:name Sachin
+OK
+127.0.0.1:6379> SET player:avg 4.5
+OK
+127.0.0.1:6379> SET player:score 10
+OK
+127.0.0.1:6379> INCR player:score
+(integer) 11
+127.0.0.1:6379> INCRBY player:score 10
+(integer) 21
+127.0.0.1:6379> INCRBYFloat player:avg 10
+"14.5"
+127.0.0.1:6379> INCRBY player:score -10
+(integer) 11
+127.0.0.1:6379>
+
+Redis internally uses sub types
+
+1.int - 10
+2-float -4.5
+3.pics/any docs - byte[]
+////////////////////////////////////////////////////////////////////////////////////////////////
+Hashes:
+......
+H-SET
+H-GET
+
+Hashes:
+Hashes are used to store collections of key/value pairs. Contrast a
+hash with a simple string data type where there is one value corresponding
+to one key. A hash has one key, but then within that
+structure are more fields and values.
+
+KEY -- Value - single value
+
+KEY - mulitiple key value pair -  json,java hashmap,python python.
+ 
+Hashes are mutable , we can add,change,increment,remove field values
+
+Hashes are schema less , so that we can store any no of field values.
+
+HSET key field value [field value ...]
+
+127.0.0.1:6379> HSET player:1  name  subramanian score 80 status alive
+
+  player:1 
+       {
+         name:'subramanina',
+         score:80,
+         status:'alive'
+       }
+
+
+houseID: 5150
+	numBedrooms: 3
+	squareFeet: 2700
+	hvac: forced air
+
+Commands:
+
+HSET - to add field and values
+HGETALL - to read all hash values
+HGET  - TO get a particular key value
+HSET - to update existing field or add new field value
+HDEL - to delete a field value from existing hash
+HINCRBY - to increment a field value
+
+-Performance :
+ o(1) - all commands
+ o(n) - hgetll
+
+27.0.0.1:6379> HSET player:1  name  subramanian score 80 status alive
+(integer) 3
+127.0.0.1:6379> HGETALL
+(error) ERR wrong number of arguments for 'hgetall' command
+127.0.0.1:6379> HGETALL player:1
+1) "name"
+2) "subramanian"
+3) "score"
+4) "80"
+5) "status"
+6) "alive"
+127.0.0.1:6379> HGET player:1 name
+"subramanian"
+127.0.0.1:6379> HGET player:1 score
+"80"
+127.0.0.1:6379> HGET player:1 status
+"alive"
+127.0.0.1:6379> HSET player:1  position  10
+(integer) 1
+127.0.0.1:6379> HGETALL player:1
+1) "name"
+2) "subramanian"
+3) "score"
+4) "80"
+5) "status"
+6) "alive"
+7) "position"
+8) "10"
+127.0.0.1:6379> HSET player:1  position  100
+(integer) 0
+127.0.0.1:6379> HGETALL player:1
+1) "name"
+2) "subramanian"
+3) "score"
+4) "80"
+5) "status"
+6) "alive"
+7) "position"
+8) "100"
+127.0.0.1:6379> HINCRBY player:1  position  2
+(integer) 102
+127.0.0.1:6379> HGETALL player:1
+1) "name"
+2) "subramanian"
+3) "score"
+4) "80"
+5) "status"
+6) "alive"
+7) "position"
+8) "102"
+127.0.0.1:6379> HEXISTS player:1 position
+(integer) 1
+127.0.0.1:6379> HDEL player:1 position
+(integer) 1
+127.0.0.1:6379> HEXISTS player:1 position
+(integer) 0
+127.0.0.1:6379> HGETALL player:1
+1) "name"
+2) "subramanian"
+3) "score"
+4) "80"
+5) "status"
+6) "alive"
+127.0.0.1:6379>
+/////////////////////////////////////////////////////////////////////////////////////////////////////
+List:
+-dynamic array
+
+
+Adding elements into list:
+
+Left : head
+ 1,2,3,4,5,6,......
+
+Right : tail
+
+Stack
+  - Last in first out
+LPUSH
+LPOP
+Queue
+  - First in first out
+RPUSH
+LPOP
+
+
+
+127.0.0.1:6379> LPUSH message hello
+(integer) 1
+127.0.0.1:6379> LPUSH message world
+(integer) 2
+127.0.0.1:6379> LINDEX message 0
+"world"
+127.0.0.1:6379> LINDEX message 1
+"hello"
+127.0.0.1:6379> LOP message
+(error) ERR unknown command `LOP`, with args beginning with: `message`,
+127.0.0.1:6379> LPOP message
+"world"
+127.0.0.1:6379> LPOP message
+"hello"
+127.0.0.1:6379> LPOP message
+(nil)
+127.0.0.1:6379>
+//////////////////////////////////////////////////////////////////////////////////////////
+
+Sets:
+Unordered collection without duplicate values
+
+offers mathmetical operations
+1.intersection
+2.difference 
+3.union
+
+Lab:
+127.0.0.1:6379> SADD players:online 1
+(integer) 1
+127.0.0.1:6379> SADD players:online 2
+(integer) 0
+127.0.0.1:6379> SADD players:online 4
+(integer) 1
+
+1 -new values
+0 -duplicate values
+
+Get All players:
+sscan players:online 0 MATCH *
+1) "0"
+2) 1) "1"
+   2) "2"
+   3) "4"
+   4) "5"
+   5) "10"
+   6) "40"
+
+How many players online??
+127.0.0.1:6379> SCARD players:online
+
+127.0.0.1:6379> SADD players:online 1
+(integer) 1
+127.0.0.1:6379> SADD players:online 2
+(integer) 0
+127.0.0.1:6379> SADD players:online 4
+(integer) 1
+127.0.0.1:6379> scan 0 MATCH players:online *
+(error) ERR syntax error
+127.0.0.1:6379> sscan 0 MATCH players:online *
+(error) ERR invalid cursor
+127.0.0.1:6379> sscan 0 MATCH players:online match *
+(error) ERR invalid cursor
+127.0.0.1:6379> sscan playlers:online 0 MATCH *
+1) "0"
+2) (empty array)
+127.0.0.1:6379> sscan players:online 0 MATCH *
+1) "0"
+2) 1) "1"
+   2) "2"
+   3) "4"
+   4) "5"
+   5) "10"
+127.0.0.1:6379> SADD players:online 4
+(integer) 0
+127.0.0.1:6379> SADD players:online 4
+(integer) 0
+127.0.0.1:6379> SADD players:online 40
+(integer) 1
+127.0.0.1:6379> SADD players:online 40
+(integer) 0
+127.0.0.1:6379> scan 0 MATCH players:online *
+(error) ERR syntax error
+127.0.0.1:6379> sscan players:online 0 MATCH *
+1) "0"
+2) 1) "1"
+   2) "2"
+   3) "4"
+   4) "5"
+   5) "10"
+   6) "40"
+127.0.0.1:6379> SCARD players:online
+(integer) 6
+127.0.0.1:6379> sismember players:online 1
+(integer) 1
+127.0.0.1:6379> sismember players:online 100
+(integer) 0
+127.0.0.1:6379> SCARD players:friends
+(integer) 1
+127.0.0.1:6379>  sinter players:online players:friends
+1) "10"
+
+
+Union : eleminate common elements
+
+127.0.0.1:6379> sadd key1  a b c d e
+(integer) 5
+127.0.0.1:6379> sadd key2 c
+(integer) 1
+127.0.0.1:6379> sadd key3 f g c
+(integer) 3
+127.0.0.1:6379> sunion key1 key2 key3
+1) "f"
+2) "c"
+3) "b"
+4) "a"
+5) "d"
+6) "e"
+7) "g"
+127.0.0.1:6379>
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+Sorted Set:
+  
+ Set is not sorted but sorted set , we can sort by asc /desc order.
+
+redis 127.0.0.1:6379> ZADD tech 1 redis 
+(integer) 1 
+redis 127.0.0.1:6379> ZADD tech 2 mongodb 
+(integer) 1 
+redis 127.0.0.1:6379> ZADD tech 3 mysql 
+(integer) 1 
+redis 127.0.0.1:6379> ZADD tech 3 mysql 
+(integer) 0 
+redis 127.0.0.1:6379> ZADD tech 4 mysql 
+(integer) 0 
+redis 127.0.0.1:6379> ZRANGE tech 0 10 WITHSCORES 
+
+
+Try all commands of set with sorted set
+
+ZSet  ====> noduplicates  +ordering
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+SET
+HSET
+ZADD
+LPUSH
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+Transaction:
+
+  Grouping set of commands as a single unit called transaction.
+
+ COMMIT  - ALL Success
+ rollback - revert
+
+ Sequences of commands you can send
+
+ MULTI
+ EXEC
+ DISCARD
+
+Transaction will be enabled with more than one connections.
+
+Lab:
+
+  MULTI
+OK
+> INCR foo
+QUEUED
+> INCR bar
+QUEUED
+> EXEC
+1) (integer) 1
+2) (integer) 1
+ 
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+

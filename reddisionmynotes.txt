@@ -1,0 +1,850 @@
+Number Store:
+.............
+
+import org.redisson.api.RAtomicLongReactive;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.time.Duration;
+
+public class Demo {
+    public static void main(String[] args) {
+        RAtomicLongReactive atomicLong = RedisconnectionUtil.getReactiveClient().getAtomicLong("user:1:visit");
+        Mono<Void> mono = Flux.range(1, 30)
+                .delayElements(Duration.ofSeconds(1))
+                .flatMap(i -> atomicLong.incrementAndGet())
+                .then();
+        mono.subscribe();
+    }
+}
+
+Multi Buckets:
+package com.mycom.redis.demos;
+
+import org.redisson.client.codec.StringCodec;
+import reactor.core.publisher.Mono;
+
+
+public class Demo {
+    /**
+     * before running this example, set keys in redis server
+     * 127.0.0.1:6379> set user:1:name sam
+     * OK
+     * 127.0.0.1:6379> set user:2:name mike
+     * OK
+     * 127.0.0.1:6379> set user:3:name sha
+     * OK
+     * @param args
+     */
+    public static void main(String[] args) {
+        Mono<Void> mono = RedisconnectionUtil.getReactiveClient().getBuckets(StringCodec.INSTANCE)
+                .get("user:1:name", "user:2:name", "user:3:name")
+                .doOnNext(System.out::println)
+                .then();
+        mono.subscribe();
+    }
+}
+
+.......................................................................................
+
+We might need this command to get the expired events from Redis
+
+config set notify-keyspace-events AKE
+
+Reference: https://redis.io/topics/notifications#configuration
+.......................................
+
+
+
+import org.redisson.api.ExpiredObjectListener;
+import org.redisson.api.RBucketReactive;
+import org.redisson.client.codec.StringCodec;
+import reactor.core.publisher.Mono;
+
+import java.util.concurrent.TimeUnit;
+
+
+public class Demo {
+
+    public static void main(String[] args) throws InterruptedException {
+        RBucketReactive<String> bucket = RedisconnectionUtil.getReactiveClient().getBucket("user:1:name", StringCodec.INSTANCE);
+        Mono<Void> set = bucket.set("sam", 10, TimeUnit.SECONDS);
+        set.subscribe();
+
+        Mono<Void> get = bucket.get()
+                .doOnNext(System.out::println)
+                .then();
+        get.subscribe();
+        Mono<Void> event = bucket.addListener(new ExpiredObjectListener() {
+            @Override
+            public void onExpired(String s) {
+                System.out.println("Expired : " + s);
+            }
+        }).then();
+        event.subscribe();
+        Thread.sleep(11000);
+
+    }
+}
+
+Key Deleted Event:
+.................
+package com.mycom.redis.demos;
+
+import org.redisson.api.DeletedObjectListener;
+import org.redisson.api.RBucketReactive;
+import org.redisson.client.codec.StringCodec;
+import reactor.core.publisher.Mono;
+
+
+public class Demo {
+
+    public static void main(String[] args) throws InterruptedException {
+        RBucketReactive<String> bucket = RedisconnectionUtil.getReactiveClient().getBucket("user:1:name", StringCodec.INSTANCE);
+        Mono<Void> set = bucket.set("sam");
+        set.subscribe();
+
+        Mono<Void> get = bucket.get()
+                .doOnNext(System.out::println)
+                .then();
+        get.subscribe();
+        Mono<Void> event = bucket.addListener(new DeletedObjectListener() {
+            @Override
+            public void onDeleted(String name) {
+                System.out.println("Deleted : " + name);
+            }
+        }).then();
+        event.block();
+
+    }
+}
+
+test :
+127.0.0.1:6379> get user:1:name
+"sam"
+127.0.0.1:6379> del user:1:name
+(integer) 1
+
+..............
+Map:
+RedisHash -> ReddsionMap
+
+public class Demo {
+
+    public static void main(String[] args) throws InterruptedException {
+        RMapReactive<String, String> map = RedisconnectionUtil.getReactiveClient().getMap("user:1", StringCodec.INSTANCE);
+        map.put("name", "sam").then().subscribe();
+        map.put("age", "10").then().subscribe();
+        map.put("city", "atlanta").then().subscribe();
+
+    }
+}
+127.0.0.1:6379> hgetall user:1
+1) "name"
+2) "sam"
+3) "age"
+4) "10"
+5) "city"
+6) "atlanta"
+127.0.0.1:6379>
+
+Storing java map as hashvalue:
+
+import org.redisson.api.RMapReactive;
+import org.redisson.client.codec.StringCodec;
+
+import java.util.Map;
+
+
+public class Demo {
+
+    public static void main(String[] args) throws InterruptedException {
+        RMapReactive<String, String> map = RedisconnectionUtil.getReactiveClient().getMap("user:2", StringCodec.INSTANCE);
+        Map<String, String> javaMap = Map.of(
+                "name", "jake",
+                "age", "30",
+                "city", "miami"
+        );
+        map.putAll(javaMap).then().subscribe();
+
+
+    }
+}
+
+127.0.0.1:6379> hgetall user:2
+1) "name"
+2) "jake"
+3) "age"
+4) "30"
+5) "city"
+6) "miami"
+127.0.0.1:6379>
+
+Storing objects into map:
+
+
+import java.util.List;
+
+public class Student {
+
+    private String name;
+    private int age;
+    private String city;
+    private List<Integer> marks;
+
+    public Student() {
+    }
+
+    @Override
+    public String toString() {
+        return "Student{" +
+                "name='" + name + '\'' +
+                ", age=" + age +
+                ", city='" + city + '\'' +
+                ", marks=" + marks +
+                '}';
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public int getAge() {
+        return age;
+    }
+
+    public void setAge(int age) {
+        this.age = age;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public void setCity(String city) {
+        this.city = city;
+    }
+
+    public List<Integer> getMarks() {
+        return marks;
+    }
+
+    public void setMarks(List<Integer> marks) {
+        this.marks = marks;
+    }
+
+    public Student(String name, int age, String city, List<Integer> marks) {
+        this.name = name;
+        this.age = age;
+        this.city = city;
+        this.marks = marks;
+    }
+}
+
+import org.redisson.api.RMapReactive;
+import org.redisson.codec.TypedJsonJacksonCodec;
+
+import java.util.List;
+
+
+public class Demo {
+
+    public static void main(String[] args) throws InterruptedException {
+        TypedJsonJacksonCodec codec = new TypedJsonJacksonCodec(Integer.class, Student.class);
+        RMapReactive<Integer, Student> map = RedisconnectionUtil.getReactiveClient().getMap("users", codec);
+
+        Student student1 = new Student("sam", 10, "atlanta", List.of(1, 2, 3));
+        Student student2 = new Student("jake", 30, "miami", List.of(10, 20, 30));
+
+        map.put(1, student1).subscribe();
+        map.put(2, student2).subscribe();
+
+
+    }
+}
+127.0.0.1:6379> hgetall users
+1) "1"
+2) "{\"age\":10,\"city\":\"atlanta\",\"marks\":[1,2,3],\"name\":\"sam\"}"
+3) "2"
+4) "{\"age\":30,\"city\":\"miami\",\"marks\":[10,20,30],\"name\":\"jake\"}"
+127.0.0.1:6379>
+
+..........................................
+How to expire single key in map?
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RMapCacheReactive;
+import org.redisson.codec.TypedJsonJacksonCodec;
+import reactor.core.publisher.Mono;
+
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+
+public class Demo {
+
+    public static void main(String[] args) throws InterruptedException {
+
+        // Map<Integer, Student>
+        TypedJsonJacksonCodec codec = new TypedJsonJacksonCodec(Integer.class, Student.class);
+        RMapCacheReactive<Integer, Student> mapCache = RedisconnectionUtil.getReactiveClient().getMapCache("users:cache", codec);
+        Student student1 = new Student("sam", 10, "atlanta", List.of(1, 2, 3));
+        Student student2 = new Student("jake", 30, "miami", List.of(10, 20, 30));
+
+        mapCache.put(1, student1, 5, TimeUnit.SECONDS).subscribe();
+        mapCache.put(2, student2, 10, TimeUnit.SECONDS).subscribe();
+
+        sleep(3000);
+
+        // access students
+        mapCache.get(1).doOnNext(System.out::println).subscribe();
+        mapCache.get(2).doOnNext(System.out::println).subscribe();
+
+        sleep(3000);
+
+        // access students
+        mapCache.get(1).doOnNext(System.out::println).subscribe();
+        mapCache.get(2).doOnNext(System.out::println).subscribe();
+
+
+    }
+
+    private static void sleep(int i) {
+        try {
+            Thread.sleep(i);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+............................................................................................
+Reddsion Local Cache Map: 
+ The application can cache map inside application memory itself.
+
+Run Server -1 
+package com.mycom.redis.demos;
+
+import org.redisson.api.LocalCachedMapOptions;
+import org.redisson.api.RLocalCachedMap;
+import org.redisson.api.RedissonClient;
+import org.redisson.codec.TypedJsonJacksonCodec;
+import reactor.core.publisher.Flux;
+
+import java.time.Duration;
+import java.util.List;
+
+public class ServerOne {
+    public static void main(String[] args) {
+        RLocalCachedMap<Integer, Student> studentsMap;
+        RedissonClient redissonClient = RedisconnectionUtil.getClient();
+
+        LocalCachedMapOptions<Integer, Student> mapOptions = LocalCachedMapOptions.<Integer, Student>defaults()
+                .syncStrategy(LocalCachedMapOptions.SyncStrategy.UPDATE)
+                .reconnectionStrategy(LocalCachedMapOptions.ReconnectionStrategy.NONE);
+
+        studentsMap = redissonClient.getLocalCachedMap(
+                "students",
+                new TypedJsonJacksonCodec(Integer.class, Student.class),
+                mapOptions
+        );
+        Student student1 = new Student("sam", 10, "atlanta", List.of(1, 2, 3));
+        Student student2 = new Student("jake", 30, "miami", List.of(10, 20, 30));
+        studentsMap.put(1, student1);
+        studentsMap.put(2, student2);
+
+        Flux.interval(Duration.ofSeconds(1))
+                .doOnNext(i -> System.out.println(i + " ==> " + studentsMap.get(1)))
+                .subscribe();
+
+        sleep(600000);
+    }
+
+    private static void sleep(int i) {
+        try {
+            Thread.sleep(i);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+Server-2
+package com.mycom.redis.demos;
+
+import org.redisson.api.LocalCachedMapOptions;
+import org.redisson.api.RLocalCachedMap;
+import org.redisson.api.RedissonClient;
+import org.redisson.codec.TypedJsonJacksonCodec;
+
+import java.util.List;
+
+public class ServerTwo {
+    public static void main(String[] args) {
+        RLocalCachedMap<Integer, Student> studentsMap;
+        RedissonClient redissonClient = RedisconnectionUtil.getClient();
+
+        LocalCachedMapOptions<Integer, Student> mapOptions = LocalCachedMapOptions.<Integer, Student>defaults()
+                .syncStrategy(LocalCachedMapOptions.SyncStrategy.UPDATE)
+                .reconnectionStrategy(LocalCachedMapOptions.ReconnectionStrategy.NONE);
+
+        studentsMap = redissonClient.getLocalCachedMap(
+                "students",
+                new TypedJsonJacksonCodec(Integer.class, Student.class),
+                mapOptions
+        );
+        Student student1 = new Student("sam", 10, "atlanta", List.of(1, 2, 3));
+        studentsMap.put(1, student1);
+    }
+}
+
+shutdown redis server 
+27.0.0.1:6379> shutdown
+
+C:\Users\sasub>docker exec -it myredisserver redis-cli
+Error response from daemon: Container 764f08011838a619e8f20419175543a8d0168aefe6d36dda04dca7a9090d9369 is not running
+
+C:\Users\sasub>docker start myredisserver
+myredisserver
+
+C:\Users\sasub>docker exec -it myredisserver redis-cli
+127.0.0.1:6379>
+
+ConfigMap as as Centerialized config server - Build Config Server based on this idea
+............................................................................................
+List
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RListReactive;
+import org.redisson.client.codec.LongCodec;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
+
+public class ListDemo {
+    public static void main(String[] args) {
+        listTest();
+    }
+
+    private static void listTest() {
+        // lrange number-input 0 -1
+        RListReactive<Long> list = RedisconnectionUtil.getReactiveClient().getList("number-input", LongCodec.INSTANCE);
+
+        List<Long> longList = LongStream.rangeClosed(1, 10)
+                .boxed()
+                .collect(Collectors.toList());
+        list.addAll(longList).subscribe();
+
+    }
+}
+
+
+127.0.0.1:6379> lrange number-input 0 -1
+ 1) "1"
+ 2) "2"
+ 3) "3"
+ 4) "4"
+ 5) "5"
+ 6) "6"
+ 7) "7"
+ 8) "8"
+ 9) "9"
+10) "10"
+
+Queue :
+
+
+
+private static void createQueue() {
+        // lrange number-input 0 -1
+        System.out.println("Queue");
+        RQueueReactive<Object> queue = RedisconnectionUtil.getReactiveClient().getQueue("number-input", LongCodec.INSTANCE);
+        queue.poll().repeat(3).subscribe(System.out::println);
+
+
+    }
+
+27.0.0.1:6379> lrange number-input 0 -1
+1) "3"
+2) "4"
+3) "5"
+4) "6"
+5) "7"
+6) "8"
+7) "9"
+8) "10"
+
+
+Stack
+
+    private static void createStack() {
+        // lrange number-input 0 -1
+        System.out.println("stack");
+        //Deque as stack and queue
+        RDequeReactive<Long> deque = RedisconnectionUtil.getReactiveClient().getDeque("number-input", LongCodec.INSTANCE);
+        deque.pollLast()
+                .repeat(3)
+                .doOnNext(System.out::println)
+                .subscribe();
+
+
+    }
+............................................................................................
+					Redis As Message Queue
+..........................................................................................
+Producer:
+package com.mycom.redis.demos;
+
+import org.redisson.api.RBlockingDequeReactive;
+import org.redisson.client.codec.LongCodec;
+import reactor.core.publisher.Flux;
+
+import java.time.Duration;
+
+public class Producer {
+    public static void main(String[] args) {
+        produceMessage();
+    }
+
+    private static void produceMessage() {
+
+        RBlockingDequeReactive<Long> msgQueue = RedisconnectionUtil.getReactiveClient().getBlockingDeque("message-queue", LongCodec.INSTANCE);
+
+        Flux.range(1, 100)
+                .delayElements(Duration.ofMillis(500))
+                .doOnNext(i -> System.out.println("going to add " + i))
+                .flatMap(i -> msgQueue.add(Long.valueOf(i)))
+                .subscribe();
+        sleep(600_000);
+
+
+    }
+
+    private static void sleep(int i) {
+        try {
+            Thread.sleep(i);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+}
+
+Consumer:
+package com.mycom.redis.demos;
+
+import org.redisson.api.RBlockingDequeReactive;
+import org.redisson.client.codec.LongCodec;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+import java.time.Duration;
+
+public class Consumer {
+    public static void main(String[] args) {
+        consumeMessage();
+    }
+
+    private static void consumeMessage() {
+        RBlockingDequeReactive<Long> msgQueue = RedisconnectionUtil.getReactiveClient().getBlockingDeque("message-queue", LongCodec.INSTANCE);
+
+        msgQueue.takeElements()
+                .doOnNext(i -> System.out.println("Consumer 1 : " + i))
+                .doOnError(System.out::println)
+                .subscribe();
+        sleep(600_000);
+    }
+
+    private static void sleep(int i) {
+        try {
+            Thread.sleep(i);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+.............................................................................................
+					HyperLogLog
+
+Computing the count of distinct elements in massive data sets is often necessary but computationally intensive. Say you need to determine the number of distinct people visiting Facebook in the past week using a single machine. Doing this with a traditional SQL query on a data set as massive as the ones we use at Facebook would take days and terabytes of memory. To speed up these queries, we implemented an algorithm called HyperLogLog (HLL) in Presto, a distributed SQL query engine. HLL works by providing an approximate count of distinct elements using a function called APPROX_DISTINCT. With HLL, we can perform the same calculation in 12 hours with less than 1 MB of memory. We have seen great improvements, with some queries being run within minutes, including those used to analyze thousands of A/B tests.
+
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.RHyperLogLogReactive;
+import org.redisson.client.codec.LongCodec;
+import reactor.core.publisher.Flux;
+
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.LongStream;
+
+public class HyperLogs {
+    public static void main(String[] args) {
+        RHyperLogLogReactive<Long> counter = RedisconnectionUtil.getReactiveClient().getHyperLogLog("user:visits", LongCodec.INSTANCE);
+
+        List<Long> list1 = LongStream.rangeClosed(1, 25000)
+                .boxed()
+                .collect(Collectors.toList());
+
+        List<Long> list2 = LongStream.rangeClosed(25001, 50000)
+                .boxed()
+                .collect(Collectors.toList());
+
+        List<Long> list3 = LongStream.rangeClosed(1, 75000)
+                .boxed()
+                .collect(Collectors.toList());
+
+        List<Long> list4 = LongStream.rangeClosed(50000, 100_000)
+                .boxed()
+                .collect(Collectors.toList());
+
+        Flux.just(list1, list2, list3, list4)
+                .flatMap(counter::addAll)
+                .then().subscribe();
+
+        System.out.println("Approxmiate Counters");
+        counter.count()
+                .doOnNext(System.out::println)
+                .subscribe();
+    }
+}
+
+pub-sub
+package com.mycom.redis.demos;
+
+import org.redisson.api.RTopicReactive;
+import org.redisson.client.codec.StringCodec;
+
+public class PubConusmer {
+    public static void main(String[] args) {
+        RTopicReactive topic = RedisconnectionUtil.getReactiveClient().getTopic("slack-room1", StringCodec.INSTANCE);
+        topic.getMessages(String.class)
+                .doOnError(System.out::println)
+                .doOnNext(System.out::println)
+                .subscribe();
+        sleep(600_000);
+    }
+    private static void sleep(int i) {
+        try {
+            Thread.sleep(i);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+}
+127.0.0.1:6379> publish slack-room1 "hi"
+(integer) 1
+127.0.0.1:6379> publish slack-room1 "kkk"
+(integer) 1
+
+
+Pattern based message delivery:
+what if one person wants to listen the message from many slack rooms.
+
+
+        RPatternTopicReactive patternTopic = this.client.getPatternTopic("slack-room*", StringCodec.INSTANCE);
+        patternTopic.addListener(String.class, new PatternMessageListener<String>() {
+            @Override
+            public void onMessage(CharSequence pattern, CharSequence topic, String msg) {
+                System.out.println(pattern + " : " + topic + " : " + msg);
+            }
+        }).subscribe();
+        sleep(600_000);
+
+
+127.0.0.1:6379> publish slack-room1 "hi"
+(integer) 1
+127.0.0.1:6379> publish slack-room4 "kkk"
+(integer) 1
+.............................................................................................
+					Batch Processing -Redis PipeLine
+.............................................................................................
+
+package com.mycom.redis.demos;
+
+import org.redisson.api.BatchOptions;
+import org.redisson.api.RBatchReactive;
+import org.redisson.api.RListReactive;
+import org.redisson.api.RSetReactive;
+import org.redisson.client.codec.LongCodec;
+import reactor.core.publisher.Flux;
+
+public class Batch {
+    public static void main(String[] args) {
+        //batchTest();
+       regularTest();
+    }
+
+    public static  void batchTest() {
+        RBatchReactive batch = RedisconnectionUtil.getReactiveClient().createBatch(BatchOptions.defaults());
+        RListReactive<Long> list = batch.getList("numbers-list", LongCodec.INSTANCE);
+        RSetReactive<Long> set = batch.getSet("numbers-set", LongCodec.INSTANCE);
+        for (long i = 0; i < 500_000; i++) {
+            list.add(i);
+            set.add(i);
+        }
+        batch.execute().doOnTerminate(()->{
+            System.out.println("done");
+        }).subscribe(System.out::println);
+
+
+
+    }
+
+    public static void regularTest() {
+        RListReactive<Long> list = RedisconnectionUtil.getReactiveClient().getList("numbers-list", LongCodec.INSTANCE);
+        RSetReactive<Long> set = RedisconnectionUtil.getReactiveClient().getSet("numbers-set", LongCodec.INSTANCE);
+
+        Flux.range(1, 500_000)
+                .map(Long::valueOf)
+                .flatMap(i -> list.add(i).then(set.add(i)))
+                .subscribe();
+
+    }
+}
+............................................................................................
+					 Transactions
+...........................................................................................
+
+
+        RBucket<String> b = redisson.getBucket("test");
+        b.set("123");
+        
+        RTransaction transaction = redisson.createTransaction(TransactionOptions.defaults());
+        RBucket<String> bucket = transaction.getBucket("test");
+        bucket.set("234");
+        
+        RMap<String, String> map = transaction.getMap("myMap");
+        map.put("1", "2");
+        
+        transaction.commit();
+
+...............................................................................................
+
+@Cachable("fib:service")
+
+Key:
+@Cachable("feb:service" ,key="#index") - only calculate for index
+
+    @Cacheable(value = "math:fib", key = "#index")
+    public int getFib(int index ,String name){
+        System.out.println("calculating fib for " + index + " " + name);
+        return this.fib(index);
+    }
+
+cacheEvit
+  @CacheEvict(value = "math:fib", key = "#index")
+    public void clearCache(int index){
+        System.out.println("clearing hash key");
+    }
+
+
+
+    @GetMapping("{index}/clear")
+    public Mono<Void> clearCache(@PathVariable int index){
+        return Mono.fromRunnable(() -> this.service.clearCache(index));
+    }
+
+auto clearing
+    @Scheduled(fixedRate = 10_000)
+    @CacheEvict(value = "math:fib", allEntries = true)
+    public void clearCache() {
+        System.out.println("clearing all fib keys");
+    }
+package com.example.demo;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cache.annotation.EnableCaching;
+import org.springframework.scheduling.annotation.EnableScheduling;
+
+@SpringBootApplication
+@EnableCaching
+@EnableScheduling
+public class DemoApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(DemoApplication.class, args);
+	}
+
+}
+How to update cache very often?
+package com.example.demo.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import java.util.stream.IntStream;
+
+@Service
+public class WeatherService {
+
+    @Autowired
+    private ExternalServiceClient client;
+
+    @Cacheable("weather")
+    public int getInfo(int zip){
+        return 0;
+    }
+
+    @Scheduled(fixedRate = 10_000)
+    public void update(){
+        System.out.println("updating weather");
+        IntStream.rangeClosed(1, 5)
+                .forEach(this.client::getWeatherInfo);
+    }
+
+}
+
+package com.example.demo.config;
+
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.stereotype.Service;
+
+import java.util.concurrent.ThreadLocalRandom;
+
+@Service
+public class ExternalServiceClient {
+
+    @CachePut(value = "weather", key = "#zip")
+    public int getWeatherInfo(int zip){
+        return ThreadLocalRandom.current().nextInt(60, 100);
+    }
+
+}
+package com.example.demo.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import reactor.core.publisher.Mono;
+
+@RestController
+@RequestMapping("/weather")
+public class WeatherController {
+
+    @Autowired
+    private WeatherService service;
+
+    @GetMapping("/{zip}")
+    public Mono<Integer> getWeather(@PathVariable int zip){
+        return Mono.fromSupplier(() -> this.service.getInfo(zip));
+    }
+
+}
+.....................................................................................
+
+
+
